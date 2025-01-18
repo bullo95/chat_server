@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "61860:61860"
+    environment:
+      - PORT=61860
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=root_password
+      - DB_NAME=dating_app
+      - GIPHY_API_KEY=${GIPHY_API_KEY}
+      - SERVER_IP=${SERVER_IP}
+      - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY}
+      - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY}
+      - EMAIL=${EMAIL}
+    volumes:
+      - ./uploads:/usr/src/app/uploads
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=tcukeb6-tcukeb6
+      - MYSQL_DATABASE=dating_app
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database.sql:/docker-entrypoint-initdb.d/database.sql
+
+volumes:
+  mysql_data:
