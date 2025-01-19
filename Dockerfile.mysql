@@ -1,0 +1,6 @@
+FROM mysql:8.0
+
+COPY mysql.cnf /etc/mysql/conf.d/
+RUN chown -R mysql:mysql /etc/mysql/conf.d/mysql.cnf
+
+CMD ["mysqld"]

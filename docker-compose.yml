@@ -1,10 +1,33 @@
 version: '3.8'
 
 services:
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
+      MYSQL_DATABASE: dating_app
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database.sql:/docker-entrypoint-initdb.d/database.sql
+    healthcheck:
+      test: mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "61860:61860"
+    volumes:
+      - app_uploads:/usr/src/app/public/uploads
     environment:
       - DB_HOST=db
       - DB_USER=root
@@ -15,33 +38,10 @@ services:
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
       - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-dummy_key}
       - EMAIL=${EMAIL:-test@example.com}
-    volumes:
-      - app_uploads:/usr/src/app/public/uploads
     depends_on:
       db:
         condition: service_healthy
 
-  db:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
-      MYSQL_DATABASE: dating_app
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./mysql-init.sh:/mysql-init.sh
-      - ./database.sql:/docker-entrypoint-initdb.d/database.sql
-      - mysql_logs:/var/log/mysql
-    command: /mysql-init.sh
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
 volumes:
   mysql_data:
-  mysql_logs:
   app_uploads:

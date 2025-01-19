@@ -10,10 +10,7 @@ const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  database: process.env.DB_NAME
 };
 
 // Création du pool de connexions
@@ -26,8 +23,7 @@ async function ensureDatabase() {
     const connection = await mysql.createConnection({
       host: dbConfig.host,
       user: dbConfig.user,
-      password: dbConfig.password,
-      ssl: dbConfig.ssl
+      password: dbConfig.password
     });
 
     // Créer la base de données si elle n'existe pas
@@ -175,25 +171,10 @@ async function dumpDatabase() {
 
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
-    // Construire la commande mysqldump avec les paramètres SSL
-    let mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST} -u ${process.env.DB_USER}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME}`;
+    // Construire la commande mysqldump sans SSL
+    const mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST} -u ${process.env.DB_USER}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME} > "${dumpPath}"`;
     
-    // Ajouter les options SSL si les certificats sont disponibles
-    if (process.env.MYSQL_SSL_CA) {
-      console.log('🔒 Utilisation de SSL pour mysqldump');
-      mysqldumpCommand += ` --ssl-mode=VERIFY_CA`;
-      mysqldumpCommand += ` --ssl-ca=${process.env.MYSQL_SSL_CA}`;
-      mysqldumpCommand += ` --ssl-cert=${process.env.MYSQL_SSL_CERT}`;
-      mysqldumpCommand += ` --ssl-key=${process.env.MYSQL_SSL_KEY}`;
-    } else {
-      console.log('⚠️ SSL non disponible pour mysqldump');
-      mysqldumpCommand += ` --ssl-mode=DISABLED`;
-    }
-    
-    mysqldumpCommand += ` > "${dumpPath}"`;
-    
-    console.log('📦 Exécution de mysqldump avec la commande:', mysqldumpCommand);
-    // Exécuter mysqldump
+    console.log('📦 Exécution de mysqldump...');
     const { stdout, stderr } = await exec(mysqldumpCommand);
     if (stderr) {
       console.warn('⚠️ Avertissements mysqldump:', stderr);
@@ -222,8 +203,7 @@ async function waitForDatabase(maxAttempts = 30, delay = 1000) {
       const connection = await mysql.createConnection({
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        ssl: dbConfig.ssl
+        password: process.env.DB_PASSWORD
       });
       
       // Test the connection
