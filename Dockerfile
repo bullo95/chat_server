@@ -1,5 +1,14 @@
-FROM node:20-alpine
+FROM node:20-slim
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    openssl \
+    socat \
+    mariadb-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
 WORKDIR /usr/src/app
 
 # Install required packages
