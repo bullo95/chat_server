@@ -5,6 +5,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
       MYSQL_DATABASE: dating_app
+      MYSQL_ROOT_HOST: '%'
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -16,12 +17,13 @@ services:
       --skip-ssl
       --require-secure-transport=OFF
       --bind-address=0.0.0.0
+      --max-connections=1000
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptcukeb6-tcukeb6"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   app:
     build:
