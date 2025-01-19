@@ -29,10 +29,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: always
+    restart: "no"
     ports:
-      - "61860:61860"
-      - "8080:8080"
+      - "61860:61860/tcp"
+      - "8080:8080/tcp"
     environment:
       - PORT=61860
       - DB_HOST=db
@@ -49,7 +49,6 @@ services:
     volumes:
       - app_uploads:/usr/src/app/public/uploads
       - ./ssl:/usr/src/app/ssl
-      - acme:/root/.acme.sh
     depends_on:
       db:
         condition: service_healthy
@@ -57,4 +56,3 @@ services:
 volumes:
   mysql_data:
   app_uploads:
-  acme:
