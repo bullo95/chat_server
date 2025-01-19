@@ -197,19 +197,24 @@ async function dumpDatabase() {
 
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
-    // Construire la commande mysqldump avec ou sans SSL selon la disponibilité des certificats
+    // Construire la commande mysqldump avec les paramètres SSL
     let mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST} -u ${process.env.DB_USER}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME}`;
     
-    if (sslConfig) {
+    // Ajouter les options SSL si les certificats sont disponibles
+    if (fs.existsSync(process.env.MYSQL_SSL_CA)) {
       console.log('🔒 Utilisation de SSL pour mysqldump');
-      mysqldumpCommand += ` --ssl-ca=${process.env.MYSQL_SSL_CA} --ssl-cert=${process.env.MYSQL_SSL_CERT} --ssl-key=${process.env.MYSQL_SSL_KEY}`;
+      mysqldumpCommand += ` --ssl-mode=VERIFY_CA`;
+      mysqldumpCommand += ` --ssl-ca=${process.env.MYSQL_SSL_CA}`;
+      mysqldumpCommand += ` --ssl-cert=${process.env.MYSQL_SSL_CERT}`;
+      mysqldumpCommand += ` --ssl-key=${process.env.MYSQL_SSL_KEY}`;
     } else {
       console.log('⚠️ SSL non disponible pour mysqldump');
+      mysqldumpCommand += ` --ssl-mode=DISABLED`;
     }
     
     mysqldumpCommand += ` > "${dumpPath}"`;
     
-    console.log('📦 Exécution de mysqldump...');
+    console.log('📦 Exécution de mysqldump avec la commande:', mysqldumpCommand);
     // Exécuter mysqldump
     const { stdout, stderr } = await exec(mysqldumpCommand);
     if (stderr) {

@@ -29,13 +29,18 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
       MYSQL_DATABASE: dating_app
+      MYSQL_SSL_CERT: /etc/mysql/ssl/server-cert.pem
+      MYSQL_SSL_KEY: /etc/mysql/ssl/server-key.pem
+      MYSQL_SSL_CA: /etc/mysql/ssl/ca-cert.pem
     ports:
       - "3306:3306"
     command: >
       --ssl-ca=/etc/mysql/ssl/ca-cert.pem
       --ssl-cert=/etc/mysql/ssl/server-cert.pem
       --ssl-key=/etc/mysql/ssl/server-key.pem
-      --require-secure-transport=OFF
+      --ssl-cipher=TLSv1.2
+      --tls-version=TLSv1.2
+      --require-secure-transport=ON
       --log-error=/var/log/mysql/error.log
       --general-log=1
       --general-log-file=/var/log/mysql/general.log
@@ -45,7 +50,7 @@ services:
       - mysql_logs:/var/log/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/database.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD", "--ssl-mode=REQUIRED"]
       interval: 5s
       timeout: 5s
       retries: 5
