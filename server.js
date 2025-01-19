@@ -9,7 +9,6 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const YAML = require('yamljs');
 const fs = require('fs');
 const https = require('https');
-const tls = require('tls');
 
 // Debug logging
 console.log('Starting server initialization...');
@@ -175,7 +174,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Create server (HTTP or HTTPS based on SSL availability)
+// Create server (HTTPS only if SSL is available)
 let server = null;
 const sslPath = path.join(__dirname, 'ssl');
 const certPath = path.join(sslPath, 'fullchain.pem');
@@ -216,14 +215,11 @@ if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
   } catch (error) {
     console.error(' Error loading SSL certificates:', error);
     console.error('Stack trace:', error.stack);
-    server = createServer(app);
-    console.log(' Falling back to HTTP server');
+    process.exit(1);
   }
 } else {
-  console.log(' SSL certificates not found - Using HTTP:');
-  console.log('- Certificate exists:', fs.existsSync(certPath));
-  console.log('- Key exists:', fs.existsSync(keyPath));
-  server = createServer(app);
+  console.error(' SSL certificates not found - HTTPS is required');
+  process.exit(1);
 }
 
 // Add test endpoint
@@ -514,15 +510,13 @@ async function start() {
     const domain = process.env.DOMAIN || process.env.SERVER_IP;
     
     server.listen(port, '0.0.0.0', () => {
-      const protocol = server instanceof https.Server ? 'https' : 'http';
-      console.log(`\n Server started on ${protocol}://${domain}:${port}`);
+      console.log(`\n Server started on https://${domain}:${port}`);
       console.log('\nServer Configuration:');
-      console.log(`- Protocol: ${protocol.toUpperCase()}`);
       console.log(`- Domain: ${domain}`);
       console.log(`- Port: ${port}`);
-      console.log(`- SSL enabled: ${server instanceof https.Server}`);
+      console.log(`- SSL: Enabled`);
       console.log('\nAPI Documentation available at:');
-      console.log(`${protocol}://${domain}:${port}/api-docs`);
+      console.log(`https://${domain}:${port}/api-docs`);
     }).on('error', (error) => {
       console.error('Server error:', error);
       process.exit(1);
