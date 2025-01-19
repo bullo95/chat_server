@@ -8,6 +8,16 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 const YAML = require('yamljs');
 const fs = require('fs');
+
+// Vérifier la présence du fichier .env
+const envPath = path.join(__dirname, '.env');
+if (!fs.existsSync(envPath)) {
+  console.error('❌ Erreur: Fichier .env non trouvé');
+  console.log('ℹ️ Veuillez créer un fichier .env à partir du modèle .env.example');
+  console.log('💡 Vous pouvez aussi utiliser le script : ./generate_env.sh');
+  process.exit(1);
+}
+
 require('dotenv').config();
 
 // Afficher le contenu de l'environnement
