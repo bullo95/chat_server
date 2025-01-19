@@ -15,13 +15,15 @@ const requiredEnvVars = [
   'PORT',
   'DB_HOST',
   'DB_USER',
-  'DB_PASSWORD',
   'DB_NAME',
   'PUBLIC_VAPID_KEY',
   'PRIVATE_VAPID_KEY',
   'EMAIL',
   'SERVER_IP'
 ];
+
+// Variables qui peuvent être vides
+const optionalEmptyVars = ['DB_PASSWORD'];
 
 console.log('🔍 Vérification des variables d\'environnement...');
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -30,7 +32,15 @@ if (missingVars.length > 0) {
   console.log('Variables disponibles:', process.env);
   process.exit(1);
 }
-console.log('✅ Toutes les variables d\'environnement sont présentes');
+console.log('✅ Toutes les variables d\'environnement requises sont présentes');
+
+// Initialiser les variables optionnelles si elles sont vides
+optionalEmptyVars.forEach(varName => {
+  if (!process.env[varName]) {
+    process.env[varName] = '';
+    console.log(`ℹ️ Variable optionnelle ${varName} initialisée avec une valeur vide`);
+  }
+});
 
 const jwt = require('jsonwebtoken');
 const { pool, setupDatabase } = require('./config/database');
