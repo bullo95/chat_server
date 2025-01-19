@@ -10,16 +10,14 @@ const privateVapidKey = process.env.PRIVATE_VAPID_KEY;
 const email = process.env.EMAIL || 'example@example.com';
 
 // Vérifier les clés VAPID
+console.log('\n🔑 Configuration des notifications push...');
 if (!publicVapidKey || !privateVapidKey) {
-  console.error('❌ Erreur: Les clés VAPID ne sont pas définies dans les variables d\'environnement');
-  console.log('Variables d\'environnement disponibles:', process.env);
+  console.error('❌ Erreur: Les clés VAPID ne sont pas définies correctement');
+  console.log('Clés actuelles :');
+  console.log('PUBLIC_VAPID_KEY=', publicVapidKey || '(non définie)');
+  console.log('PRIVATE_VAPID_KEY=', privateVapidKey || '(non définie)');
   process.exit(1);
 }
-
-console.log('🔑 Configuration des clés VAPID...');
-console.log('Email:', email);
-console.log('Public Key:', publicVapidKey);
-console.log('Private Key:', privateVapidKey);
 
 try {
   webpush.setVapidDetails(
@@ -28,8 +26,13 @@ try {
     privateVapidKey
   );
   console.log('✅ Configuration VAPID réussie');
+  console.log('📧 Email de contact:', email);
 } catch (error) {
-  console.error('❌ Erreur lors de la configuration VAPID:', error);
+  console.error('❌ Erreur lors de la configuration VAPID:', error.message);
+  console.log('Détails de la configuration :');
+  console.log('Email:', email);
+  console.log('Public Key:', publicVapidKey);
+  console.log('Private Key:', privateVapidKey);
   process.exit(1);
 }
 

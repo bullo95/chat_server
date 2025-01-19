@@ -10,6 +10,17 @@ const YAML = require('yamljs');
 const fs = require('fs');
 require('dotenv').config();
 
+// Afficher le contenu de l'environnement
+console.log('📄 Contenu des variables d\'environnement :');
+Object.keys(process.env).sort().forEach(key => {
+  // Ne pas afficher les valeurs sensibles en entier
+  const value = process.env[key];
+  const displayValue = key.includes('KEY') || key.includes('PASSWORD') 
+    ? `${value.substring(0, 4)}...${value.substring(value.length - 4)}`
+    : value;
+  console.log(`${key}=${displayValue}`);
+});
+
 // Vérifier les variables d'environnement requises
 const requiredEnvVars = [
   'PORT',
