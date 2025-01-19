@@ -175,11 +175,8 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Create HTTP server
-const httpServer = createServer(app);
-
-// Try to load SSL certificates
-let httpsServer = null;
+// Create server (HTTP or HTTPS based on SSL availability)
+let server = null;
 const sslPath = path.join(__dirname, 'ssl');
 const certPath = path.join(sslPath, 'fullchain.pem');
 const keyPath = path.join(sslPath, 'privkey.pem');
@@ -196,16 +193,19 @@ if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
       key: fs.readFileSync(keyPath, 'utf8'),
       cert: fs.readFileSync(certPath, 'utf8')
     };
-    httpsServer = https.createServer(credentials, app);
-    console.log('✅ SSL certificates loaded successfully');
+    server = https.createServer(credentials, app);
+    console.log('✅ SSL certificates loaded successfully - Using HTTPS');
   } catch (error) {
     console.error('❌ Error loading SSL certificates:', error);
     console.error('Stack trace:', error.stack);
+    server = createServer(app);
+    console.log('⚠️ Falling back to HTTP server');
   }
 } else {
-  console.log('❌ SSL certificates not found:');
+  console.log('❌ SSL certificates not found - Using HTTP:');
   console.log('- Certificate exists:', fs.existsSync(certPath));
   console.log('- Key exists:', fs.existsSync(keyPath));
+  server = createServer(app);
 }
 
 // Add test endpoint
@@ -214,7 +214,7 @@ app.get('/test', (req, res) => {
 });
 
 // Configuration Socket.IO avec CORS
-const io = new Server(httpsServer || httpServer, {
+const io = new Server(server, {
   cors: {
     origin: corsOptions.origin,
     methods: corsOptions.methods,
@@ -490,31 +490,21 @@ async function start() {
     const port = process.env.PORT || 61860;
     const domain = process.env.DOMAIN || process.env.SERVER_IP;
     
-    // Start HTTP server
-    httpServer.listen(port, '0.0.0.0', () => {
-      console.log(`\n✅ V1 - HTTP server started on http://${domain}:${port}`);
+    server.listen(port, '0.0.0.0', () => {
+      const protocol = server instanceof https.Server ? 'https' : 'http';
+      console.log(`\n✅ Server started on ${protocol}://${domain}:${port}`);
+      console.log('\nServer Configuration:');
+      console.log(`- Protocol: ${protocol.toUpperCase()}`);
+      console.log(`- Domain: ${domain}`);
+      console.log(`- Port: ${port}`);
+      console.log(`- SSL enabled: ${server instanceof https.Server}`);
+      console.log('\nAPI Documentation available at:');
+      console.log(`${protocol}://${domain}:${port}/api-docs`);
     }).on('error', (error) => {
-      console.error('HTTP server error:', error);
+      console.error('Server error:', error);
+      process.exit(1);
     });
 
-    // Start HTTPS server on the same port if available
-    if (httpsServer) {
-      httpsServer.listen(port, '0.0.0.0', () => {
-        console.log(`✅ V1 - HTTPS server started on https://${domain}:${port}`);
-      }).on('error', (error) => {
-        console.error('HTTPS server error:', error);
-      });
-    }
-
-    console.log('\nServer Configuration:');
-    console.log(`- Domain: ${domain}`);
-    console.log(`- Port: ${port}`);
-    console.log(`- SSL enabled: ${!!httpsServer}`);
-    console.log('\nAPI Documentation available at:');
-    console.log(`- HTTP:  http://${domain}:${port}/api-docs`);
-    if (httpsServer) {
-      console.log(`- HTTPS: https://${domain}:${port}/api-docs`);
-    }
   } catch (error) {
     console.error('❌ Startup error:', error);
     console.error('Stack trace:', error.stack);
