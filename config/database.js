@@ -185,9 +185,32 @@ async function dumpDatabase() {
   }
 }
 
+// Fonction pour attendre que la base de données soit prête
+async function waitForDatabase(maxAttempts = 30, delay = 1000) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const connection = await mysql.createConnection({
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+      });
+      await connection.end();
+      console.log('✅ Base de données prête');
+      return true;
+    } catch (error) {
+      console.log(`⏳ Tentative ${attempt}/${maxAttempts} de connexion à la base de données...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('Impossible de se connecter à la base de données après plusieurs tentatives');
+}
+
 // Fonction pour initialiser la base de données
 async function setupDatabase() {
   try {
+    // Attendre que la base de données soit prête
+    await waitForDatabase();
+    
     const isValid = await checkDatabaseStructure();
     if (!isValid) {
       console.log('❗ Structure de la base de données non conforme');
