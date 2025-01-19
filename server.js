@@ -10,6 +10,11 @@ const YAML = require('yamljs');
 const fs = require('fs');
 const https = require('https');
 
+// Debug logging
+console.log('Starting server initialization...');
+console.log('Current working directory:', process.cwd());
+console.log('Node version:', process.version);
+
 // Vérifier la présence du fichier .env
 const envPath = path.join(__dirname, '.env');
 if (!fs.existsSync(envPath)) {
@@ -21,6 +26,12 @@ if (!fs.existsSync(envPath)) {
 }
 
 require('dotenv').config();
+
+// Log environment variables (excluding sensitive data)
+console.log('Environment configuration:');
+console.log('- DOMAIN:', process.env.DOMAIN);
+console.log('- PORT:', process.env.PORT);
+console.log('- SERVER_IP:', process.env.SERVER_IP);
 
 // Afficher le contenu de l'environnement
 console.log('📄 Contenu des variables d\'environnement :');
@@ -123,16 +134,37 @@ const swaggerSpec = swaggerJsDoc(swaggerOptions);
 
 const app = express();
 
-// Configuration CORS
+// Basic error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ error: 'Internal Server Error', details: err.message });
+});
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Configuration CORS with detailed logging
 const corsOptions = {
-  origin: [
-    `http://${process.env.DOMAIN}`,
-    `https://${process.env.DOMAIN}`,
-    `http://${process.env.DOMAIN}:61860`,
-    `https://${process.env.DOMAIN}:61860`,
-    'http://localhost:3000',
-    'http://localhost:61860'
-  ],
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      `http://${process.env.DOMAIN}`,
+      `https://${process.env.DOMAIN}`,
+      `http://${process.env.DOMAIN}:61860`,
+      `https://${process.env.DOMAIN}:61860`,
+      'http://localhost:3000',
+      'http://localhost:61860'
+    ];
+    console.log('Incoming request origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -152,21 +184,34 @@ const sslPath = path.join(__dirname, 'ssl');
 const certPath = path.join(sslPath, 'fullchain.pem');
 const keyPath = path.join(sslPath, 'privkey.pem');
 
+console.log('Checking SSL certificates:');
+console.log('- SSL directory:', sslPath);
+console.log('- Certificate path:', certPath);
+console.log('- Key path:', keyPath);
+
 if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
   try {
+    console.log('Found SSL certificates, attempting to load...');
     const credentials = {
       key: fs.readFileSync(keyPath, 'utf8'),
       cert: fs.readFileSync(certPath, 'utf8')
     };
     httpsServer = https.createServer(credentials, app);
-    console.log('✅ Certificats SSL chargés avec succès');
+    console.log('✅ SSL certificates loaded successfully');
   } catch (error) {
-    console.error('❌ Erreur lors du chargement des certificats SSL:', error);
+    console.error('❌ Error loading SSL certificates:', error);
+    console.error('Stack trace:', error.stack);
   }
 } else {
-  console.log('ℹ️ Certificats SSL non trouvés, fonctionnement en HTTP uniquement');
-  console.log('Recherche des certificats dans:', sslPath);
+  console.log('❌ SSL certificates not found:');
+  console.log('- Certificate exists:', fs.existsSync(certPath));
+  console.log('- Key exists:', fs.existsSync(keyPath));
 }
+
+// Add test endpoint
+app.get('/test', (req, res) => {
+  res.json({ message: 'Server is running!' });
+});
 
 // Configuration Socket.IO avec CORS
 const io = new Server(httpsServer || httpServer, {
@@ -438,31 +483,42 @@ async function setupDatabaseAndServer() {
 // Démarrage du serveur
 async function start() {
   try {
+    console.log('Starting database setup...');
     await setupDatabaseAndServer();
+    console.log('Database setup completed');
+
     const port = process.env.PORT || 61860;
     const domain = process.env.DOMAIN || process.env.SERVER_IP;
     
     // Start HTTP server
-    httpServer.listen(port, () => {
-      console.log(`\n✅ V1 - Serveur HTTP démarré sur http://${domain}:${port}`);
+    httpServer.listen(port, '0.0.0.0', () => {
+      console.log(`\n✅ V1 - HTTP server started on http://${domain}:${port}`);
+    }).on('error', (error) => {
+      console.error('HTTP server error:', error);
     });
 
     // Start HTTPS server on the same port if available
     if (httpsServer) {
-      httpsServer.listen(port, () => {
-        console.log(`✅ V1 - Serveur HTTPS démarré sur https://${domain}:${port}`);
+      httpsServer.listen(port, '0.0.0.0', () => {
+        console.log(`✅ V1 - HTTPS server started on https://${domain}:${port}`);
+      }).on('error', (error) => {
+        console.error('HTTPS server error:', error);
       });
     }
 
-    console.log(`📚 Documentation API disponible sur:`);
-    console.log(`   - HTTP:  http://${domain}:${port}/api-docs`);
+    console.log('\nServer Configuration:');
+    console.log(`- Domain: ${domain}`);
+    console.log(`- Port: ${port}`);
+    console.log(`- SSL enabled: ${!!httpsServer}`);
+    console.log('\nAPI Documentation available at:');
+    console.log(`- HTTP:  http://${domain}:${port}/api-docs`);
     if (httpsServer) {
-      console.log(`   - HTTPS: https://${domain}:${port}/api-docs`);
+      console.log(`- HTTPS: https://${domain}:${port}/api-docs`);
     }
-    console.log(`🌐 Domaine configuré: ${domain}`);
-    console.log(`📡 Port d'écoute: ${port}`);
   } catch (error) {
-    console.error('❌ Erreur lors du démarrage:', error);
+    console.error('❌ Startup error:', error);
+    console.error('Stack trace:', error.stack);
+    process.exit(1);
   }
 }
 
