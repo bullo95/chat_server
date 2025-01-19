@@ -14,12 +14,12 @@ services:
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY}
       - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY}
       - EMAIL=${EMAIL}
-      - MYSQL_SSL_CA=/etc/mysql/certs/ca-cert.pem
-      - MYSQL_SSL_CERT=/etc/mysql/certs/client-cert.pem
-      - MYSQL_SSL_KEY=/etc/mysql/certs/client-key.pem
+      - MYSQL_SSL_CA=/etc/mysql/ssl/ca-cert.pem
+      - MYSQL_SSL_CERT=/etc/mysql/ssl/client-cert.pem
+      - MYSQL_SSL_KEY=/etc/mysql/ssl/client-key.pem
     volumes:
       - ./uploads:/usr/src/app/uploads
-      - ./certs:/etc/mysql/certs:ro
+      - ./certs:/etc/mysql/ssl:ro
     depends_on:
       db:
         condition: service_healthy
@@ -32,14 +32,14 @@ services:
       - MYSQL_ROOT_PASSWORD=tcukeb6-tcukeb6
       - MYSQL_DATABASE=dating_app
     command: >
-      --ssl-ca=/etc/mysql/certs/ca-cert.pem
-      --ssl-cert=/etc/mysql/certs/server-cert.pem
-      --ssl-key=/etc/mysql/certs/server-key.pem
+      --ssl-ca=/etc/mysql/ssl/ca-cert.pem
+      --ssl-cert=/etc/mysql/ssl/server-cert.pem
+      --ssl-key=/etc/mysql/ssl/server-key.pem
       --require-secure-transport=ON
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/database.sql
-      - ./certs:/etc/mysql/certs
+      - ./certs:/etc/mysql/ssl:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s

@@ -5,18 +5,37 @@ const path = require('path');
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 
+// Configuration SSL
+const sslConfig = (() => {
+  try {
+    if (process.env.MYSQL_SSL_CA && process.env.MYSQL_SSL_CERT && process.env.MYSQL_SSL_KEY) {
+      if (fs.existsSync(process.env.MYSQL_SSL_CA) && 
+          fs.existsSync(process.env.MYSQL_SSL_CERT) && 
+          fs.existsSync(process.env.MYSQL_SSL_KEY)) {
+        console.log('✅ Certificats SSL trouvés, activation de SSL');
+        return {
+          ca: fs.readFileSync(process.env.MYSQL_SSL_CA),
+          cert: fs.readFileSync(process.env.MYSQL_SSL_CERT),
+          key: fs.readFileSync(process.env.MYSQL_SSL_KEY),
+          rejectUnauthorized: true
+        };
+      }
+    }
+    console.log('⚠️ Certificats SSL non trouvés, connexion sans SSL');
+    return undefined;
+  } catch (error) {
+    console.warn('⚠️ Erreur lors de la lecture des certificats SSL:', error.message);
+    return undefined;
+  }
+})();
+
 // Configuration de la base de données
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'dating_app',
-  ssl: {
-    ca: process.env.MYSQL_SSL_CA ? fs.readFileSync(process.env.MYSQL_SSL_CA) : undefined,
-    cert: process.env.MYSQL_SSL_CERT ? fs.readFileSync(process.env.MYSQL_SSL_CERT) : undefined,
-    key: process.env.MYSQL_SSL_KEY ? fs.readFileSync(process.env.MYSQL_SSL_KEY) : undefined,
-    rejectUnauthorized: true
-  }
+  ssl: sslConfig
 };
 
 // Création du pool de connexions
@@ -178,8 +197,14 @@ async function dumpDatabase() {
 
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
-    // Construire la commande mysqldump avec les credentials et SSL
-    const mysqldumpCommand = `mysqldump --ssl-ca=${process.env.MYSQL_SSL_CA} --ssl-cert=${process.env.MYSQL_SSL_CERT} --ssl-key=${process.env.MYSQL_SSL_KEY} -h ${process.env.DB_HOST || 'localhost'} -u ${process.env.DB_USER || 'root'}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME || 'dating_app'} > "${dumpPath}"`;
+    // Construire la commande mysqldump avec ou sans SSL selon la disponibilité des certificats
+    let mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST || 'localhost'} -u ${process.env.DB_USER || 'root'}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME || 'dating_app'}`;
+    
+    if (sslConfig) {
+      mysqldumpCommand += ` --ssl-ca=${process.env.MYSQL_SSL_CA} --ssl-cert=${process.env.MYSQL_SSL_CERT} --ssl-key=${process.env.MYSQL_SSL_KEY}`;
+    }
+    
+    mysqldumpCommand += ` > "${dumpPath}"`;
     
     // Exécuter mysqldump
     await exec(mysqldumpCommand);
