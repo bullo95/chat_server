@@ -507,19 +507,21 @@ async function start() {
     const port = process.env.PORT || 61860;
     const domain = process.env.DOMAIN || process.env.SERVER_IP;
     
+    // Log server configuration before starting
+    console.log('\nServer Configuration:');
+    console.log(`- Domain: ${domain}`);
+    console.log(`- Port: ${port}`);
+    console.log('- Protocol: HTTPS');
+    console.log('\nAPI Documentation will be available at:');
+    console.log(`https://${domain}:${port}/api-docs`);
+
+    // Start the server
     server.listen(port, '0.0.0.0', () => {
-      console.log(`\n Server started on https://${domain}:${port}`);
-      console.log('\nServer Configuration:');
-      console.log(`- Domain: ${domain}`);
-      console.log(`- Port: ${port}`);
-      console.log(`- SSL: Enabled`);
-      console.log('\nAPI Documentation available at:');
-      console.log(`https://${domain}:${port}/api-docs`);
+      console.log(`\n HTTPS Server started successfully`);
     }).on('error', (error) => {
       console.error('Server error:', error);
       process.exit(1);
     });
-
   } catch (error) {
     console.error(' Startup error:', error);
     console.error('Stack trace:', error.stack);

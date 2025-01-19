@@ -52,13 +52,17 @@ router.post('/', upload.single('file'), (req, res) => {
       return res.status(400).json({ error: 'Aucun fichier envoyé' });
     }
     
-    const serverUrl = `http://${req.get('host')}`;
+    const serverUrl = `https://${req.get('host')}`;
     const fileUrl = `${serverUrl}/uploads/${req.file.filename}`;
     
-    res.json({ url: fileUrl });
+    res.json({
+      message: 'File uploaded successfully',
+      filename: req.file.filename,
+      url: fileUrl
+    });
   } catch (error) {
     console.error('Erreur lors de l\'upload:', error);
-    res.status(500).json({ error: 'Erreur lors de l\'upload du fichier' });
+    res.status(500).json({ error: 'Erreur lors de l\'upload du fichier', details: error.message });
   }
 });
 
