@@ -9,6 +9,7 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const YAML = require('yamljs');
 const fs = require('fs');
 const https = require('https');
+const tls = require('tls');
 
 // Debug logging
 console.log('Starting server initialization...');
@@ -18,9 +19,8 @@ console.log('Node version:', process.version);
 // Vérifier la présence du fichier .env
 const envPath = path.join(__dirname, '.env');
 if (!fs.existsSync(envPath)) {
-  console.warn('⚠️ Fichier .env non trouvé');
-  console.log('ℹ️ Utilisation des valeurs par défaut');
-  console.log('💡 Pour une configuration personnalisée :');
+  console.warn(' Fichier .env non trouvé');
+  console.log(' Pour une configuration personnalisée :');
   console.log('  1. Créez un fichier .env à partir du modèle .env.example');
   console.log('  2. Ou utilisez le script : ./generate_env.sh');
 }
@@ -34,7 +34,7 @@ console.log('- PORT:', process.env.PORT);
 console.log('- SERVER_IP:', process.env.SERVER_IP);
 
 // Afficher le contenu de l'environnement
-console.log('📄 Contenu des variables d\'environnement :');
+console.log(' Contenu des variables d\'environnement :');
 Object.keys(process.env).sort().forEach(key => {
   // Ne pas afficher les valeurs sensibles en entier
   const value = process.env[key];
@@ -56,11 +56,11 @@ const requiredEnvVars = [
 // Variables qui peuvent être vides
 const optionalEmptyVars = ['DB_PASSWORD', 'PUBLIC_VAPID_KEY', 'PRIVATE_VAPID_KEY', 'EMAIL', 'GIPHY_API_KEY'];
 
-console.log('\n🔍 Vérification des variables d\'environnement...');
+console.log('\n Vérification des variables d\'environnement...');
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missingVars.length > 0) {
-  console.warn('⚠️ Variables d\'environnement manquantes:', missingVars.join(', '));
-  console.log('ℹ️ Utilisation des valeurs par défaut :');
+  console.warn(' Variables d\'environnement manquantes:', missingVars.join(', '));
+  console.log(' Utilisation des valeurs par défaut :');
   missingVars.forEach(varName => {
     switch(varName) {
       case 'PORT':
@@ -87,11 +87,11 @@ if (missingVars.length > 0) {
 optionalEmptyVars.forEach(varName => {
   if (!process.env[varName]) {
     process.env[varName] = '';
-    console.log(`ℹ️ Variable optionnelle ${varName} initialisée avec une valeur vide`);
+    console.log(` Variable optionnelle ${varName} initialisée avec une valeur vide`);
   }
 });
 
-console.log('✅ Configuration de base terminée\n');
+console.log(' Configuration de base terminée\n');
 
 const jwt = require('jsonwebtoken');
 const { pool, setupDatabase } = require('./config/database');
@@ -191,18 +191,33 @@ if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
     console.log('Found SSL certificates, attempting to load...');
     const credentials = {
       key: fs.readFileSync(keyPath, 'utf8'),
-      cert: fs.readFileSync(certPath, 'utf8')
+      cert: fs.readFileSync(certPath, 'utf8'),
+      minVersion: 'TLSv1.2',
+      ciphers: tls.getCiphers().join(':'),
+      honorCipherOrder: true,
+      secureOptions: [
+        'SSL_OP_NO_SSLv2',
+        'SSL_OP_NO_SSLv3',
+        'SSL_OP_NO_TLSv1',
+        'SSL_OP_NO_TLSv1_1'
+      ].reduce((memo, option) => memo | require('constants')[option], 0)
     };
+
+    // Log TLS configuration
+    console.log('TLS Configuration:');
+    console.log('- Min Version:', credentials.minVersion);
+    console.log('- Available Ciphers:', tls.getCiphers().length);
+
     server = https.createServer(credentials, app);
-    console.log('✅ SSL certificates loaded successfully - Using HTTPS');
+    console.log(' SSL certificates loaded successfully - Using HTTPS');
   } catch (error) {
-    console.error('❌ Error loading SSL certificates:', error);
+    console.error(' Error loading SSL certificates:', error);
     console.error('Stack trace:', error.stack);
     server = createServer(app);
-    console.log('⚠️ Falling back to HTTP server');
+    console.log(' Falling back to HTTP server');
   }
 } else {
-  console.log('❌ SSL certificates not found - Using HTTP:');
+  console.log(' SSL certificates not found - Using HTTP:');
   console.log('- Certificate exists:', fs.existsSync(certPath));
   console.log('- Key exists:', fs.existsSync(keyPath));
   server = createServer(app);
@@ -210,7 +225,12 @@ if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
 
 // Add test endpoint
 app.get('/test', (req, res) => {
-  res.json({ message: 'Server is running!' });
+  res.json({ 
+    message: 'Server is running!',
+    protocol: req.protocol,
+    secure: req.secure,
+    headers: req.headers
+  });
 });
 
 // Configuration Socket.IO avec CORS
@@ -475,7 +495,7 @@ async function setupDatabaseAndServer() {
   try {
     await setupDatabase();
   } catch (error) {
-    console.error('❌ Erreur lors de la vérification/initialisation de la base de données:', error);
+    console.error(' Erreur lors de la vérification/initialisation de la base de données:', error);
     throw error;
   }
 }
@@ -492,7 +512,7 @@ async function start() {
     
     server.listen(port, '0.0.0.0', () => {
       const protocol = server instanceof https.Server ? 'https' : 'http';
-      console.log(`\n✅ Server started on ${protocol}://${domain}:${port}`);
+      console.log(`\n Server started on ${protocol}://${domain}:${port}`);
       console.log('\nServer Configuration:');
       console.log(`- Protocol: ${protocol.toUpperCase()}`);
       console.log(`- Domain: ${domain}`);
@@ -506,7 +526,7 @@ async function start() {
     });
 
   } catch (error) {
-    console.error('❌ Startup error:', error);
+    console.error(' Startup error:', error);
     console.error('Stack trace:', error.stack);
     process.exit(1);
   }
