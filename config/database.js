@@ -5,6 +5,17 @@ const fsPromises = require('fs').promises;
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 
+// Fonction pour obtenir l'IP du conteneur MySQL
+async function getMySQLContainerIP() {
+  try {
+    const { stdout } = await exec("getent hosts db | awk '{ print $1 }'");
+    return stdout.trim();
+  } catch (error) {
+    console.error('❌ Impossible d\'obtenir l\'IP du conteneur MySQL:', error);
+    return process.env.DB_HOST; // Fallback to DB_HOST
+  }
+}
+
 // Configuration de la base de données
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -20,9 +31,9 @@ const pool = mysql.createPool(dbConfig);
 async function initializeDatabase() {
   try {
     const connection = await mysql.createConnection({
-      host: dbConfig.host,
-      user: dbConfig.user,
-      password: dbConfig.password
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD
     });
 
     // Créer la base de données si elle n'existe pas
@@ -53,8 +64,12 @@ async function dumpDatabase() {
 
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
-    // Utiliser mariadb-dump avec les options pour désactiver SSL
-    const dumpCommand = `mariadb-dump --skip-ssl --protocol=TCP -h ${process.env.DB_HOST} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
+    // Obtenir l'IP du conteneur MySQL
+    const dbIP = await getMySQLContainerIP();
+    console.log(`📍 IP du conteneur MySQL: ${dbIP}`);
+    
+    // Utiliser mariadb-dump avec l'IP du conteneur
+    const dumpCommand = `mariadb-dump --skip-ssl --protocol=TCP -h ${dbIP} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
     
     console.log('📦 Exécution de mariadb-dump...');
     const { stdout, stderr } = await exec(dumpCommand);

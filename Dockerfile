@@ -2,8 +2,8 @@ FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
-# Install MariaDB client
-RUN apk add --no-cache bash mariadb-client
+# Install MariaDB client and network tools
+RUN apk add --no-cache bash mariadb-client bind-tools
 
 # Copy package files and install dependencies
 COPY package*.json ./
