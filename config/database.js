@@ -171,12 +171,12 @@ async function dumpDatabase() {
 
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
-    // Construire la commande mysqldump sans SSL
-    const mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST} -u ${process.env.DB_USER}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME} > "${dumpPath}"`;
+    // Construire la commande mysqldump sans options SSL
+    const mysqldumpCommand = `mysqldump --protocol=TCP -h ${process.env.DB_HOST} -u ${process.env.DB_USER}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME} > "${dumpPath}"`;
     
     console.log('📦 Exécution de mysqldump...');
     const { stdout, stderr } = await exec(mysqldumpCommand);
-    if (stderr) {
+    if (stderr && !stderr.includes('Deprecated program name')) {
       console.warn('⚠️ Avertissements mysqldump:', stderr);
     }
     if (stdout) {
