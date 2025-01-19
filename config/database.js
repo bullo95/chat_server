@@ -23,7 +23,7 @@ const dbConfig = {
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   ssl: false,
-  sslMode: 'DISABLED',
+  connectTimeout: 20000,
   authPlugins: {
     mysql_native_password: () => () => {
       return Buffer.from([0]);
@@ -47,12 +47,7 @@ async function initializeDatabase() {
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       ssl: false,
-      sslMode: 'DISABLED',
-      authPlugins: {
-        mysql_native_password: () => () => {
-          return Buffer.from([0]);
-        }
-      }
+      connectTimeout: 20000
     });
 
     // Créer la base de données si elle n'existe pas
@@ -87,8 +82,8 @@ async function dumpDatabase() {
     const dbIP = await getMySQLContainerIP();
     console.log(`📍 IP du conteneur MySQL: ${dbIP}`);
     
-    // Utiliser le chemin absolu vers mariadb-dump et désactiver SSL de toutes les façons possibles
-    const dumpCommand = `/usr/bin/mariadb-dump --skip-ssl --ssl=0 --ssl-mode=DISABLED --ssl-verify-server-cert=FALSE --no-defaults -h ${dbIP} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} --protocol=TCP ${process.env.DB_NAME} > "${dumpPath}"`;
+    // Utiliser le chemin absolu vers mariadb-dump et désactiver SSL
+    const dumpCommand = `/usr/bin/mariadb-dump --protocol=TCP --skip-ssl -h ${dbIP} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
     
     console.log('📦 Exécution de mariadb-dump...');
     console.log('Commande:', dumpCommand);
@@ -111,7 +106,7 @@ async function dumpDatabase() {
 }
 
 // Fonction pour attendre que la base de données soit prête
-async function waitForDatabase(maxAttempts = 30, delay = 1000) {
+async function waitForDatabase(maxAttempts = 30, delay = 2000) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       console.log(`🔄 Tentative ${attempt}/${maxAttempts} de connexion à la base de données...`);
@@ -121,12 +116,7 @@ async function waitForDatabase(maxAttempts = 30, delay = 1000) {
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
         ssl: false,
-        sslMode: 'DISABLED',
-        authPlugins: {
-          mysql_native_password: () => () => {
-            return Buffer.from([0]);
-          }
-        }
+        connectTimeout: 20000
       });
       
       await connection.ping();

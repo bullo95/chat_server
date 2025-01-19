@@ -7,7 +7,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
       MYSQL_DATABASE: dating_app
-      MYSQL_SSL_MODE: DISABLED
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -17,11 +16,14 @@ services:
       --default-authentication-plugin=mysql_native_password
       --ssl=0
       --skip-ssl
-      --ssl-mode=DISABLED
       --require-secure-transport=OFF
-      --skip-ssl-setup
-      --ssl-cipher=
-      --tls-version=
+      --bind-address=0.0.0.0
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   app:
     build:
@@ -37,15 +39,14 @@ services:
       - DB_USER=root
       - DB_PASSWORD=tcukeb6-tcukeb6
       - DB_NAME=dating_app
-      - MYSQL_SSL_MODE=DISABLED
-      - MYSQL_ATTR_SSL_VERIFY_SERVER_CERT=false
       - GIPHY_API_KEY=${GIPHY_API_KEY:-dummy_key}
       - SERVER_IP=${SERVER_IP:-localhost}
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
       - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-dummy_key}
       - EMAIL=${EMAIL:-test@example.com}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   mysql_data:
