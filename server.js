@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const readline = require('readline');
-const { createServer } = require('http');
 const { Server } = require('socket.io');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
@@ -109,7 +108,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://${process.env.SERVER_IP}:${process.env.PORT}`,
+        url: `https://${process.env.SERVER_IP}:${process.env.PORT}`,
         description: 'Development server',
       },
     ],
@@ -149,9 +148,7 @@ app.use((req, res, next) => {
 const corsOptions = {
   origin: function(origin, callback) {
     const allowedOrigins = [
-      `http://${process.env.DOMAIN}`,
       `https://${process.env.DOMAIN}`,
-      `http://${process.env.DOMAIN}:61860`,
       `https://${process.env.DOMAIN}:61860`,
       'http://localhost:3000',
       'http://localhost:61860'
@@ -170,12 +167,10 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Create server (HTTPS only if SSL is available)
-let server = null;
+// Load SSL certificates
 const sslPath = path.join(__dirname, 'ssl');
 const certPath = path.join(sslPath, 'fullchain.pem');
 const keyPath = path.join(sslPath, 'privkey.pem');
@@ -185,40 +180,43 @@ console.log('- SSL directory:', sslPath);
 console.log('- Certificate path:', certPath);
 console.log('- Key path:', keyPath);
 
-if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
-  try {
-    console.log('Found SSL certificates, attempting to load...');
-    const credentials = {
-      key: fs.readFileSync(keyPath, 'utf8'),
-      cert: fs.readFileSync(certPath, 'utf8'),
-      ciphers: [
-        'ECDHE-ECDSA-AES128-GCM-SHA256',
-        'ECDHE-RSA-AES128-GCM-SHA256',
-        'ECDHE-ECDSA-AES256-GCM-SHA384',
-        'ECDHE-RSA-AES256-GCM-SHA384',
-        'ECDHE-ECDSA-CHACHA20-POLY1305',
-        'ECDHE-RSA-CHACHA20-POLY1305',
-        'DHE-RSA-AES128-GCM-SHA256',
-        'DHE-RSA-AES256-GCM-SHA384'
-      ].join(':'),
-      honorCipherOrder: true,
-      minVersion: 'TLSv1.2'
-    };
-
-    server = https.createServer(credentials, app);
-    console.log(' SSL certificates loaded successfully - Using HTTPS');
-    
-    // Log SSL configuration
-    console.log('SSL Configuration:');
-    console.log('- TLS Version:', credentials.minVersion);
-    console.log('- Ciphers:', credentials.ciphers);
-  } catch (error) {
-    console.error(' Error loading SSL certificates:', error);
-    console.error('Stack trace:', error.stack);
-    process.exit(1);
-  }
-} else {
+if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
   console.error(' SSL certificates not found - HTTPS is required');
+  console.error('Certificate exists:', fs.existsSync(certPath));
+  console.error('Key exists:', fs.existsSync(keyPath));
+  process.exit(1);
+}
+
+// Create HTTPS server
+let server;
+try {
+  const credentials = {
+    key: fs.readFileSync(keyPath, 'utf8'),
+    cert: fs.readFileSync(certPath, 'utf8'),
+    ciphers: [
+      'ECDHE-ECDSA-AES128-GCM-SHA256',
+      'ECDHE-RSA-AES128-GCM-SHA256',
+      'ECDHE-ECDSA-AES256-GCM-SHA384',
+      'ECDHE-RSA-AES256-GCM-SHA384',
+      'ECDHE-ECDSA-CHACHA20-POLY1305',
+      'ECDHE-RSA-CHACHA20-POLY1305',
+      'DHE-RSA-AES128-GCM-SHA256',
+      'DHE-RSA-AES256-GCM-SHA384'
+    ].join(':'),
+    honorCipherOrder: true,
+    minVersion: 'TLSv1.2'
+  };
+
+  server = https.createServer(credentials, app);
+  console.log(' SSL certificates loaded successfully');
+  
+  // Log SSL configuration
+  console.log('SSL Configuration:');
+  console.log('- TLS Version:', credentials.minVersion);
+  console.log('- Ciphers:', credentials.ciphers);
+} catch (error) {
+  console.error(' Error loading SSL certificates:', error);
+  console.error('Stack trace:', error.stack);
   process.exit(1);
 }
 
