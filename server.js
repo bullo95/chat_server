@@ -416,13 +416,15 @@ async function setupDatabaseAndServer() {
 async function start() {
   try {
     await setupDatabaseAndServer();
-    const port = process.env.PORT;
+    const port = process.env.PORT || 61860;
     const domain = process.env.DOMAIN || process.env.SERVER_IP;
     
-    httpServer.listen(port, '0.0.0.0', () => {
+    // Listen on all network interfaces (0.0.0.0)
+    httpServer.listen(port, () => {
       console.log(`\n✅ V1 - Serveur démarré sur http://${domain}:${port}`);
       console.log(`📚 Documentation API disponible sur http://${domain}:${port}/api-docs`);
       console.log(`🌐 Domaine configuré: ${domain}`);
+      console.log(`📡 Port d'écoute: ${port}`);
     });
   } catch (error) {
     console.error('❌ Erreur lors du démarrage:', error);

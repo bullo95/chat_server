@@ -32,15 +32,14 @@ services:
     restart: always
     ports:
       - "61860:61860"
-    volumes:
-      - app_uploads:/usr/src/app/public/uploads
     environment:
+      - PORT=61860
       - DB_HOST=db
       - DB_USER=root
       - DB_PASSWORD=tcukeb6-tcukeb6
       - DB_NAME=dating_app
       - DOMAIN=bdomenech.freeboxos.fr
-      - SERVER_IP=bdomenech.freeboxos.fr
+      - SERVER_IP=0.0.0.0
       - GIPHY_API_KEY=${GIPHY_API_KEY:-dummy_key}
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
       - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-dummy_key}
@@ -48,6 +47,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - app_uploads:/usr/src/app/public/uploads
 
 volumes:
   mysql_data:
