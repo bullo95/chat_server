@@ -21,7 +21,10 @@ const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+  database: process.env.DB_NAME,
+  ssl: {
+    rejectUnauthorized: false
+  }
 };
 
 // Création du pool de connexions
@@ -33,7 +36,10 @@ async function initializeDatabase() {
     const connection = await mysql.createConnection({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD
+      password: process.env.DB_PASSWORD,
+      ssl: {
+        rejectUnauthorized: false
+      }
     });
 
     // Créer la base de données si elle n'existe pas
@@ -68,8 +74,8 @@ async function dumpDatabase() {
     const dbIP = await getMySQLContainerIP();
     console.log(`📍 IP du conteneur MySQL: ${dbIP}`);
     
-    // Utiliser mariadb-dump avec l'IP du conteneur
-    const dumpCommand = `mariadb-dump --skip-ssl --protocol=TCP -h ${dbIP} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
+    // Utiliser mariadb-dump avec toutes les options SSL désactivées
+    const dumpCommand = `mariadb-dump --skip-ssl --ssl-mode=DISABLED --ssl-verify-server-cert=OFF -h ${dbIP} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
     
     console.log('📦 Exécution de mariadb-dump...');
     const { stdout, stderr } = await exec(dumpCommand);
@@ -95,7 +101,10 @@ async function waitForDatabase(maxAttempts = 30, delay = 1000) {
       const connection = await mysql.createConnection({
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD
+        password: process.env.DB_PASSWORD,
+        ssl: {
+          rejectUnauthorized: false
+        }
       });
       
       await connection.ping();

@@ -12,7 +12,11 @@ services:
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --ssl=0
+      --skip-ssl
+      --require-secure-transport=OFF
 
   app:
     build:
@@ -28,6 +32,7 @@ services:
       - DB_USER=root
       - DB_PASSWORD=tcukeb6-tcukeb6
       - DB_NAME=dating_app
+      - MYSQL_ATTR_SSL_VERIFY_SERVER_CERT=false
       - GIPHY_API_KEY=${GIPHY_API_KEY:-dummy_key}
       - SERVER_IP=${SERVER_IP:-localhost}
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
