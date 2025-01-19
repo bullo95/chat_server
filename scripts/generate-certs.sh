@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Create certs directory if it doesn't exist
-mkdir -p certs && cd certs
+mkdir -p ../certs && cd ../certs
 
 # Generate CA private key and certificate
 openssl genrsa 2048 > ca-key.pem
