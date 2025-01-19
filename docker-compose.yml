@@ -4,19 +4,18 @@ services:
     ports:
       - "61860:61860"
     environment:
-      - PORT=61860
       - DB_HOST=db
       - DB_USER=root
       - DB_PASSWORD=tcukeb6-tcukeb6
       - DB_NAME=dating_app
-      - GIPHY_API_KEY=${GIPHY_API_KEY}
-      - SERVER_IP=${SERVER_IP}
-      - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY}
-      - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY}
-      - EMAIL=${EMAIL}
       - MYSQL_SSL_CA=/usr/src/app/certs/ca-cert.pem
       - MYSQL_SSL_CERT=/usr/src/app/certs/client-cert.pem
       - MYSQL_SSL_KEY=/usr/src/app/certs/client-key.pem
+      - GIPHY_API_KEY=${GIPHY_API_KEY:-dummy_key}
+      - SERVER_IP=${SERVER_IP:-localhost}
+      - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
+      - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-dummy_key}
+      - EMAIL=${EMAIL:-test@example.com}
     volumes:
       - app_uploads:/usr/src/app/public/uploads
       - mysql_certs:/usr/src/app/certs:ro
@@ -29,18 +28,13 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
       MYSQL_DATABASE: dating_app
-      MYSQL_SSL_CERT: /etc/mysql/ssl/server-cert.pem
-      MYSQL_SSL_KEY: /etc/mysql/ssl/server-key.pem
-      MYSQL_SSL_CA: /etc/mysql/ssl/ca-cert.pem
     ports:
       - "3306:3306"
     command: >
       --ssl-ca=/etc/mysql/ssl/ca-cert.pem
       --ssl-cert=/etc/mysql/ssl/server-cert.pem
       --ssl-key=/etc/mysql/ssl/server-key.pem
-      --ssl-cipher=TLSv1.2
-      --tls-version=TLSv1.2
-      --require-secure-transport=ON
+      --require-secure-transport=OFF
       --log-error=/var/log/mysql/error.log
       --general-log=1
       --general-log-file=/var/log/mysql/general.log
@@ -50,7 +44,7 @@ services:
       - mysql_logs:/var/log/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/database.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD", "--ssl-mode=REQUIRED"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
       timeout: 5s
       retries: 5
