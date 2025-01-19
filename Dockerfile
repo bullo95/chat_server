@@ -11,41 +11,26 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /usr/src/app
 
-# Install required packages
-RUN apk update && \
-    apk add --no-cache \
-    bash \
-    mariadb-client \
-    openssl \
-    curl \
-    socat \
-    && curl https://get.acme.sh | sh
-
-# Copy package files and install dependencies
+# Copy package files
 COPY package*.json ./
-RUN npm install
-RUN npm install -g web-push
 
-# Copy application source
+# Install dependencies
+RUN npm install
+
+# Copy application files
 COPY . .
 
-# Set up permissions and directories
-RUN chmod +x generate_env.sh && \
-    chmod +x scripts/setup-ssl.sh && \
-    mkdir -p public/uploads && \
-    mkdir -p database_dumps && \
-    mkdir -p certs && \
-    mkdir -p ssl
+# Create required directories
+RUN mkdir -p /usr/src/app/ssl \
+    /usr/src/app/public/uploads \
+    /usr/src/app/database_dumps \
+    && chmod +x /usr/src/app/scripts/*.sh
 
-# Generate VAPID keys and store them
-RUN web-push generate-vapid-keys > vapid.json && \
-    export PUBLIC_VAPID_KEY=$(grep -A 1 'Public Key:' vapid.json | tail -n 1) && \
-    export PRIVATE_VAPID_KEY=$(grep -A 1 'Private Key:' vapid.json | tail -n 1) && \
-    echo "PUBLIC_VAPID_KEY=$PUBLIC_VAPID_KEY" > .env && \
-    echo "PRIVATE_VAPID_KEY=$PRIVATE_VAPID_KEY" >> .env
+# Install acme.sh
+RUN curl https://get.acme.sh | sh -s email=domenech.bruno@me.com
 
-# Expose ports for HTTP, HTTPS, and ACME
-EXPOSE 61860 443 8080
+# Expose ports
+EXPOSE 61860 8080
 
-# Run the application with SSL setup
-CMD ["/bin/bash", "-c", "./scripts/setup-ssl.sh && ./generate_env.sh && npm start"]
+# Start the application
+CMD ["./scripts/init-certs.sh"]
