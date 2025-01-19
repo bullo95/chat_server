@@ -8,6 +8,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 const YAML = require('yamljs');
 const fs = require('fs');
+const https = require('https');
 
 // Vérifier la présence du fichier .env
 const envPath = path.join(__dirname, '.env');
@@ -145,8 +146,26 @@ app.use(express.urlencoded({ extended: true }));
 // Create HTTP server
 const httpServer = createServer(app);
 
+// Try to load SSL certificates if they exist
+let httpsServer = null;
+try {
+  const sslPath = path.join(__dirname, 'ssl');
+  if (fs.existsSync(path.join(sslPath, 'privkey.pem')) && fs.existsSync(path.join(sslPath, 'fullchain.pem'))) {
+    const credentials = {
+      key: fs.readFileSync(path.join(sslPath, 'privkey.pem'), 'utf8'),
+      cert: fs.readFileSync(path.join(sslPath, 'fullchain.pem'), 'utf8')
+    };
+    httpsServer = https.createServer(credentials, app);
+    console.log('✅ Certificats SSL chargés avec succès');
+  } else {
+    console.log('ℹ️ Certificats SSL non trouvés, fonctionnement en HTTP uniquement');
+  }
+} catch (error) {
+  console.error('❌ Erreur lors du chargement des certificats SSL:', error);
+}
+
 // Initialize Socket.IO with CORS
-const io = new Server(httpServer, {
+const io = new Server(httpsServer || httpServer, {
   cors: {
     origin: corsOptions.origin,
     methods: corsOptions.methods,
@@ -417,15 +436,24 @@ async function start() {
   try {
     await setupDatabaseAndServer();
     const port = process.env.PORT || 61860;
+    const httpsPort = 443;
     const domain = process.env.DOMAIN || process.env.SERVER_IP;
     
-    // Listen on all network interfaces (0.0.0.0)
+    // Start HTTP server
     httpServer.listen(port, () => {
-      console.log(`\n✅ V1 - Serveur démarré sur http://${domain}:${port}`);
-      console.log(`📚 Documentation API disponible sur http://${domain}:${port}/api-docs`);
-      console.log(`🌐 Domaine configuré: ${domain}`);
-      console.log(`📡 Port d'écoute: ${port}`);
+      console.log(`\n✅ V1 - Serveur HTTP démarré sur http://${domain}:${port}`);
     });
+
+    // Start HTTPS server if available
+    if (httpsServer) {
+      httpsServer.listen(httpsPort, () => {
+        console.log(`✅ V1 - Serveur HTTPS démarré sur https://${domain}`);
+      });
+    }
+
+    console.log(`📚 Documentation API disponible sur ${httpsServer ? 'https' : 'http'}://${domain}${httpsServer ? '' : ':' + port}/api-docs`);
+    console.log(`🌐 Domaine configuré: ${domain}`);
+    console.log(`📡 Ports d'écoute: HTTP=${port}${httpsServer ? ', HTTPS=443' : ''}`);
   } catch (error) {
     console.error('❌ Erreur lors du démarrage:', error);
   }

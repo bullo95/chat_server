@@ -32,6 +32,7 @@ services:
     restart: always
     ports:
       - "61860:61860"
+      - "443:443"
     environment:
       - PORT=61860
       - DB_HOST=db
@@ -44,12 +45,15 @@ services:
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
       - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-dummy_key}
       - EMAIL=${EMAIL:-test@example.com}
+    volumes:
+      - app_uploads:/usr/src/app/public/uploads
+      - ./ssl:/usr/src/app/ssl:ro
+      - letsencrypt:/etc/letsencrypt
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - app_uploads:/usr/src/app/public/uploads
 
 volumes:
   mysql_data:
   app_uploads:
+  letsencrypt:
