@@ -26,5 +26,6 @@ RUN chmod +x /usr/src/app/generate_env.sh
 # Expose port
 EXPOSE 61860
 
+
 # Run the environment script and start the application
 CMD ["sh", "-c", "./generate_env.sh && npm start"]
