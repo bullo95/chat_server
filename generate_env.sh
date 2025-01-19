@@ -1,16 +1,8 @@
-#!/bin/bash
-echo "Generating .env file from docker-compose.yml..."
+#!/usr/bin/env bash
+echo "Generating .env file..."
+
 # Fichier .env à mettre à jour
 ENV_FILE=".env"
-
-# Chemin vers docker-compose.yml
-COMPOSE_FILE="docker-compose.yml"
-
-# Vérifier si le fichier docker-compose.yml existe
-if [ ! -f "$COMPOSE_FILE" ]; then
-    echo "Erreur : Le fichier $COMPOSE_FILE est introuvable."
-    exit 1
-fi
 
 # Sauvegarde de l'ancien .env si nécessaire
 if [ -f "$ENV_FILE" ]; then
@@ -26,32 +18,31 @@ if [ -z "$PUBLIC_VAPID_KEY" ] || [ -z "$PRIVATE_VAPID_KEY" ]; then
         PUBLIC_VAPID_KEY=$(sed -n '/Public Key:/,/^$/p' vapid.json | tail -n 2 | head -n 1)
         PRIVATE_VAPID_KEY=$(sed -n '/Private Key:/,/^$/p' vapid.json | tail -n 2 | head -n 1)
     else
-        echo "Génération de nouvelles clés VAPID..."
-        VAPID_KEYS=$(web-push generate-vapid-keys)
-        PUBLIC_VAPID_KEY=$(echo "$VAPID_KEYS" | grep "Public Key:" | cut -d' ' -f3)
-        PRIVATE_VAPID_KEY=$(echo "$VAPID_KEYS" | grep "Private Key:" | cut -d' ' -f3)
-    fi
-    
-    if [ -z "$PUBLIC_VAPID_KEY" ] || [ -z "$PRIVATE_VAPID_KEY" ]; then
-        echo " Erreur : Impossible de générer ou récupérer les clés VAPID"
+        echo "Erreur : Impossible de trouver les clés VAPID"
         exit 1
     fi
-    echo " Clés VAPID configurées avec succès"
 fi
 
-# Extraction des variables de docker-compose.yml
-PORT=61860
-DB_HOST="db"
-DB_USER="root"
-DB_PASSWORD="tcukeb6-tcukeb6"
-DB_NAME="dating_app"
+if [ -z "$PUBLIC_VAPID_KEY" ] || [ -z "$PRIVATE_VAPID_KEY" ]; then
+    echo "Erreur : Impossible de générer ou récupérer les clés VAPID"
+    exit 1
+fi
+
+echo "Clés VAPID configurées avec succès"
+
+# Configuration des variables d'environnement
+PORT=${PORT:-61860}
+DB_HOST=${DB_HOST:-"db"}
+DB_USER=${DB_USER:-"root"}
+DB_PASSWORD=${DB_PASSWORD:-"tcukeb6-tcukeb6"}
+DB_NAME=${DB_NAME:-"dating_app"}
 GIPHY_API_KEY=${GIPHY_API_KEY:-"votre_api_key_giphy"}
 SERVER_IP=${SERVER_IP:-"127.0.0.1"}
 EMAIL=${EMAIL:-"your_email@example.com"}
 
 # Génération du fichier .env
 cat <<EOL > "$ENV_FILE"
-# Fichier généré automatiquement à partir de docker-compose.yml
+# Fichier généré automatiquement
 PORT=$PORT
 DB_HOST=$DB_HOST
 DB_USER=$DB_USER
@@ -64,6 +55,6 @@ PRIVATE_VAPID_KEY=$PRIVATE_VAPID_KEY
 EMAIL=$EMAIL
 EOL
 
-echo " Fichier .env mis à jour avec succès"
-echo " Contenu du fichier .env :"
+echo "Fichier .env mis à jour avec succès"
+echo "Contenu du fichier .env :"
 cat "$ENV_FILE"

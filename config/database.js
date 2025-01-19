@@ -7,10 +7,10 @@ const exec = promisify(require('child_process').exec);
 
 // Configuration de la base de données
 const dbConfig = {
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'dating_app'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'dating_app'
 };
 
 // Création du pool de connexions
@@ -172,7 +172,7 @@ async function dumpDatabase() {
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
     // Construire la commande mysqldump avec les credentials de la connexion
-    const mysqldumpCommand = `mysqldump -h ${dbConfig.host} -u ${dbConfig.user}${dbConfig.password ? ` -p${dbConfig.password}` : ''} ${dbConfig.database} > "${dumpPath}"`;
+    const mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST || 'localhost'} -u ${process.env.DB_USER || 'root'}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME || 'dating_app'} > "${dumpPath}"`;
     
     // Exécuter mysqldump
     await exec(mysqldumpCommand);

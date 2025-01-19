@@ -2,32 +2,27 @@ FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
-# Copy package files
-COPY package*.json ./
-
 # Install dependencies
-RUN npm install
+RUN apk add --no-cache bash mysql-client
 
-# Install web-push globally for key generation
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install
 RUN npm install -g web-push
 
 # Copy application source
 COPY . .
 
-# Create uploads directory
-RUN mkdir -p uploads
+# Set up permissions and directories
+RUN chmod +x generate_env.sh && \
+    mkdir -p uploads && \
+    mkdir -p database_dumps
 
-# Copy the environment generation script
-COPY generate_env.sh /usr/src/app/generate_env.sh
-
-# Make the script executable
-RUN chmod +x /usr/src/app/generate_env.sh && ls -la /usr/src/app/generate_env.sh
-
-# Generate VAPID keys and environment file
+# Generate VAPID keys
 RUN web-push generate-vapid-keys > vapid.json
 
 # Expose port
 EXPOSE 61860
 
 # Run the environment script and start the application
-CMD ["sh", "-c", "export PUBLIC_VAPID_KEY=$(grep -A 1 'Public Key:' vapid.json | tail -n 1) && export PRIVATE_VAPID_KEY=$(grep -A 1 'Private Key:' vapid.json | tail -n 1) && /usr/src/app/generate_env.sh && echo '📄 Contenu du fichier .env:' && cat .env && echo '\n🚀 Démarrage du serveur...' && npm start"]
+CMD ["/bin/bash", "-c", "export PUBLIC_VAPID_KEY=$(grep -A 1 'Public Key:' vapid.json | tail -n 1) && export PRIVATE_VAPID_KEY=$(grep -A 1 'Private Key:' vapid.json | tail -n 1) && ./generate_env.sh && echo '📄 Contenu du fichier .env:' && cat .env && echo '\n🚀 Démarrage du serveur...' && npm start"]
