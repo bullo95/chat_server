@@ -233,18 +233,35 @@ async function dumpDatabase() {
 async function waitForDatabase(maxAttempts = 30, delay = 1000) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
+      console.log(`🔄 Tentative ${attempt}/${maxAttempts} de connexion à la base de données...`);
+      console.log(`📝 Configuration: host=${process.env.DB_HOST}, user=${process.env.DB_USER}, database=${process.env.DB_NAME}`);
+      
       const connection = await mysql.createConnection({
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
-        ssl: dbConfig.ssl
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        ssl: sslConfig
       });
+      
+      // Test the connection
+      await connection.ping();
       await connection.end();
+      
       console.log('✅ Base de données prête');
       return true;
     } catch (error) {
-      console.log(`⏳ Tentative ${attempt}/${maxAttempts} de connexion à la base de données...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      console.error(`❌ Erreur de connexion (tentative ${attempt}/${maxAttempts}):`, {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        sqlState: error.sqlState,
+        sqlMessage: error.sqlMessage
+      });
+      
+      if (attempt < maxAttempts) {
+        console.log(`⏳ Attente de ${delay}ms avant la prochaine tentative...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
   }
   throw new Error('Impossible de se connecter à la base de données après plusieurs tentatives');
