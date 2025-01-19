@@ -3,14 +3,14 @@ FROM node:20-alpine
 WORKDIR /usr/src/app
 
 # Install required packages
-RUN apk add --no-cache \
+RUN apk update && \
+    apk add --no-cache \
     bash \
     mariadb-client \
-    certbot \
     openssl \
-    python3 \
-    py3-pip \
-    && pip3 install --no-cache-dir certbot-nginx
+    curl \
+    socat \
+    && curl https://get.acme.sh | sh
 
 # Copy package files and install dependencies
 COPY package*.json ./
@@ -36,7 +36,7 @@ RUN web-push generate-vapid-keys > vapid.json && \
     echo "PRIVATE_VAPID_KEY=$PRIVATE_VAPID_KEY" >> .env
 
 # Expose ports for HTTP and HTTPS
-EXPOSE 61860 443
+EXPOSE 61860 443 80
 
 # Run the application with SSL setup
 CMD ["/bin/bash", "-c", "./scripts/setup-ssl.sh && ./generate_env.sh && npm start"]
