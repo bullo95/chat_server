@@ -146,25 +146,29 @@ app.use(express.urlencoded({ extended: true }));
 // Create HTTP server
 const httpServer = createServer(app);
 
-// Try to load SSL certificates if they exist
+// Try to load SSL certificates
 let httpsServer = null;
-try {
-  const sslPath = path.join(__dirname, 'ssl');
-  if (fs.existsSync(path.join(sslPath, 'privkey.pem')) && fs.existsSync(path.join(sslPath, 'fullchain.pem'))) {
+const sslPath = path.join(__dirname, 'ssl');
+const certPath = path.join(sslPath, 'fullchain.pem');
+const keyPath = path.join(sslPath, 'privkey.pem');
+
+if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+  try {
     const credentials = {
-      key: fs.readFileSync(path.join(sslPath, 'privkey.pem'), 'utf8'),
-      cert: fs.readFileSync(path.join(sslPath, 'fullchain.pem'), 'utf8')
+      key: fs.readFileSync(keyPath, 'utf8'),
+      cert: fs.readFileSync(certPath, 'utf8')
     };
     httpsServer = https.createServer(credentials, app);
     console.log('✅ Certificats SSL chargés avec succès');
-  } else {
-    console.log('ℹ️ Certificats SSL non trouvés, fonctionnement en HTTP uniquement');
+  } catch (error) {
+    console.error('❌ Erreur lors du chargement des certificats SSL:', error);
   }
-} catch (error) {
-  console.error('❌ Erreur lors du chargement des certificats SSL:', error);
+} else {
+  console.log('ℹ️ Certificats SSL non trouvés, fonctionnement en HTTP uniquement');
+  console.log('Recherche des certificats dans:', sslPath);
 }
 
-// Initialize Socket.IO with CORS
+// Configuration Socket.IO avec CORS
 const io = new Server(httpsServer || httpServer, {
   cors: {
     origin: corsOptions.origin,
@@ -436,7 +440,6 @@ async function start() {
   try {
     await setupDatabaseAndServer();
     const port = process.env.PORT || 61860;
-    const httpsPort = 443;
     const domain = process.env.DOMAIN || process.env.SERVER_IP;
     
     // Start HTTP server
@@ -444,16 +447,20 @@ async function start() {
       console.log(`\n✅ V1 - Serveur HTTP démarré sur http://${domain}:${port}`);
     });
 
-    // Start HTTPS server if available
+    // Start HTTPS server on the same port if available
     if (httpsServer) {
-      httpsServer.listen(httpsPort, () => {
-        console.log(`✅ V1 - Serveur HTTPS démarré sur https://${domain}`);
+      httpsServer.listen(port, () => {
+        console.log(`✅ V1 - Serveur HTTPS démarré sur https://${domain}:${port}`);
       });
     }
 
-    console.log(`📚 Documentation API disponible sur ${httpsServer ? 'https' : 'http'}://${domain}${httpsServer ? '' : ':' + port}/api-docs`);
+    console.log(`📚 Documentation API disponible sur:`);
+    console.log(`   - HTTP:  http://${domain}:${port}/api-docs`);
+    if (httpsServer) {
+      console.log(`   - HTTPS: https://${domain}:${port}/api-docs`);
+    }
     console.log(`🌐 Domaine configuré: ${domain}`);
-    console.log(`📡 Ports d'écoute: HTTP=${port}${httpsServer ? ', HTTPS=443' : ''}`);
+    console.log(`📡 Port d'écoute: ${port}`);
   } catch (error) {
     console.error('❌ Erreur lors du démarrage:', error);
   }
