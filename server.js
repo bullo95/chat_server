@@ -170,9 +170,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Function to wait for SSL certificates
-async function waitForSSLCertificates(certPath, keyPath, maxAttempts = 30) {
-  console.log('Waiting for SSL certificates...');
+// Function to setup HTTPS server with SSL certificates
+async function setupHttpsServer(certPath, keyPath, maxAttempts = 30) {
+  console.log('\nWaiting for SSL certificates...');
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     console.log(`Checking for certificates (attempt ${attempt}/${maxAttempts})...`);
@@ -185,7 +185,33 @@ async function waitForSSLCertificates(certPath, keyPath, maxAttempts = 30) {
         
         if (cert.length > 0 && key.length > 0) {
           console.log('✅ SSL certificates found and valid');
-          return true;
+          
+          const credentials = {
+            key: key,
+            cert: cert,
+            ciphers: [
+              'ECDHE-ECDSA-AES128-GCM-SHA256',
+              'ECDHE-RSA-AES128-GCM-SHA256',
+              'ECDHE-ECDSA-AES256-GCM-SHA384',
+              'ECDHE-RSA-AES256-GCM-SHA384',
+              'ECDHE-ECDSA-CHACHA20-POLY1305',
+              'ECDHE-RSA-CHACHA20-POLY1305',
+              'DHE-RSA-AES128-GCM-SHA256',
+              'DHE-RSA-AES256-GCM-SHA384'
+            ].join(':'),
+            honorCipherOrder: true,
+            minVersion: 'TLSv1.2'
+          };
+
+          const server = https.createServer(credentials, app);
+          console.log('✅ HTTPS server created successfully');
+          
+          // Log SSL configuration
+          console.log('SSL Configuration:');
+          console.log('- TLS Version:', credentials.minVersion);
+          console.log('- Ciphers configured');
+          
+          return server;
         }
       } catch (error) {
         console.log('Certificate files exist but are not ready yet...');
@@ -196,98 +222,7 @@ async function waitForSSLCertificates(certPath, keyPath, maxAttempts = 30) {
     await new Promise(resolve => setTimeout(resolve, 5000));
   }
   
-  return false;
-}
-
-// Load SSL certificates
-const sslPath = path.join(__dirname, 'ssl');
-const certPath = path.join(sslPath, 'fullchain.pem');
-const keyPath = path.join(sslPath, 'privkey.pem');
-
-console.log('Checking SSL certificates:');
-console.log('- SSL directory:', sslPath);
-console.log('- Certificate path:', certPath);
-console.log('- Key path:', keyPath);
-
-// Create HTTPS server
-let server;
-
-// Start server
-async function start() {
-  try {
-    console.log('Starting database setup...');
-    await setupDatabaseAndServer();
-    console.log('✅ Database setup completed');
-
-    // Wait for SSL certificates
-    const certificatesReady = await waitForSSLCertificates(certPath, keyPath);
-    if (!certificatesReady) {
-      console.error('❌ Timed out waiting for SSL certificates');
-      process.exit(1);
-    }
-
-    // Create HTTPS server
-    try {
-      const credentials = {
-        key: fs.readFileSync(keyPath, 'utf8'),
-        cert: fs.readFileSync(certPath, 'utf8'),
-        ciphers: [
-          'ECDHE-ECDSA-AES128-GCM-SHA256',
-          'ECDHE-RSA-AES128-GCM-SHA256',
-          'ECDHE-ECDSA-AES256-GCM-SHA384',
-          'ECDHE-RSA-AES256-GCM-SHA384',
-          'ECDHE-ECDSA-CHACHA20-POLY1305',
-          'ECDHE-RSA-CHACHA20-POLY1305',
-          'DHE-RSA-AES128-GCM-SHA256',
-          'DHE-RSA-AES256-GCM-SHA384'
-        ].join(':'),
-        honorCipherOrder: true,
-        minVersion: 'TLSv1.2'
-      };
-
-      server = https.createServer(credentials, app);
-      console.log('✅ SSL certificates loaded successfully');
-      
-      // Log SSL configuration
-      console.log('SSL Configuration:');
-      console.log('- TLS Version:', credentials.minVersion);
-      console.log('- Ciphers:', credentials.ciphers);
-    } catch (error) {
-      console.error('❌ Error loading SSL certificates:', error);
-      console.error('Stack trace:', error.stack);
-      process.exit(1);
-    }
-
-    const port = process.env.PORT || 61860;
-    const domain = process.env.DOMAIN || process.env.SERVER_IP;
-    
-    // Log server configuration before starting
-    console.log('\nServer Configuration:');
-    console.log(`- Domain: ${domain}`);
-    console.log(`- Port: ${port}`);
-    console.log('- Protocol: HTTPS');
-    console.log('\nAPI Documentation:');
-    console.log(`https://${domain}:${port}/api-docs`);
-
-    // Start the server
-    await new Promise((resolve, reject) => {
-      server.listen(port, '0.0.0.0')
-        .once('error', reject)
-        .once('listening', () => {
-          console.log(`\n✅ HTTPS Server started successfully`);
-          resolve();
-        });
-    });
-  } catch (error) {
-    if (error.code === 'EADDRINUSE') {
-      console.error(`\n❌ Port ${process.env.PORT} is already in use`);
-      console.error('Please make sure no other service is using this port');
-    } else {
-      console.error('\n❌ Startup error:', error);
-      console.error('Stack trace:', error.stack);
-    }
-    process.exit(1);
-  }
+  return null;
 }
 
 // Add test endpoint
@@ -300,8 +235,8 @@ app.get('/test', (req, res) => {
   });
 });
 
-// Configuration Socket.IO avec CORS
-const io = new Server(server, {
+// Configure Socket.IO with CORS
+const io = new Server(null, {
   cors: {
     origin: corsOptions.origin,
     methods: corsOptions.methods,
@@ -567,5 +502,57 @@ async function setupDatabaseAndServer() {
   }
 }
 
-// Démarrage du serveur
+// Start server
+async function start() {
+  try {
+    console.log('Starting database setup...');
+    await setupDatabaseAndServer();
+    console.log('✅ Database setup completed');
+
+    const sslPath = path.join(__dirname, 'ssl');
+    const certPath = path.join(sslPath, 'fullchain.pem');
+    const keyPath = path.join(sslPath, 'privkey.pem');
+
+    // Setup HTTPS server
+    const server = await setupHttpsServer(certPath, keyPath);
+    if (!server) {
+      console.error('❌ Failed to setup HTTPS server');
+      process.exit(1);
+    }
+
+    io.listen(server);
+
+    const port = process.env.PORT || 61860;
+    const domain = process.env.DOMAIN || process.env.SERVER_IP;
+    
+    // Log server configuration before starting
+    console.log('\nServer Configuration:');
+    console.log(`- Domain: ${domain}`);
+    console.log(`- Port: ${port}`);
+    console.log('- Protocol: HTTPS');
+    console.log('\nAPI Documentation:');
+    console.log(`https://${domain}:${port}/api-docs`);
+
+    // Start the server
+    await new Promise((resolve, reject) => {
+      server.listen(port, '0.0.0.0')
+        .once('error', reject)
+        .once('listening', () => {
+          console.log(`\n✅ HTTPS Server started successfully`);
+          resolve();
+        });
+    });
+  } catch (error) {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`\n❌ Port ${process.env.PORT} is already in use`);
+      console.error('Please make sure no other service is using this port');
+    } else {
+      console.error('\n❌ Startup error:', error);
+      console.error('Stack trace:', error.stack);
+    }
+    process.exit(1);
+  }
+}
+
+// Start the application
 start();
