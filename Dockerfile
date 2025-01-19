@@ -2,7 +2,7 @@ FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
-# Install dependencies
+# Install dependencies including MySQL client
 RUN apk add --no-cache bash mysql-client
 
 # Copy package files and install dependencies

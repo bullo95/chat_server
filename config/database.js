@@ -198,21 +198,33 @@ async function dumpDatabase() {
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
     // Construire la commande mysqldump avec ou sans SSL selon la disponibilité des certificats
-    let mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST || 'localhost'} -u ${process.env.DB_USER || 'root'}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME || 'dating_app'}`;
+    let mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST} -u ${process.env.DB_USER}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME}`;
     
     if (sslConfig) {
+      console.log('🔒 Utilisation de SSL pour mysqldump');
       mysqldumpCommand += ` --ssl-ca=${process.env.MYSQL_SSL_CA} --ssl-cert=${process.env.MYSQL_SSL_CERT} --ssl-key=${process.env.MYSQL_SSL_KEY}`;
+    } else {
+      console.log('⚠️ SSL non disponible pour mysqldump');
     }
     
     mysqldumpCommand += ` > "${dumpPath}"`;
     
+    console.log('📦 Exécution de mysqldump...');
     // Exécuter mysqldump
-    await exec(mysqldumpCommand);
+    const { stdout, stderr } = await exec(mysqldumpCommand);
+    if (stderr) {
+      console.warn('⚠️ Avertissements mysqldump:', stderr);
+    }
+    if (stdout) {
+      console.log('✨ Sortie mysqldump:', stdout);
+    }
     console.log(`✅ Dump de la base de données sauvegardé dans: ${dumpPath}`);
     
     return dumpPath;
   } catch (error) {
     console.error('❌ Erreur lors du dump de la base de données:', error);
+    if (error.stdout) console.error('Sortie standard:', error.stdout);
+    if (error.stderr) console.error('Erreur standard:', error.stderr);
     throw error;
   }
 }
