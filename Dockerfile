@@ -2,8 +2,8 @@ FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
-# Install dependencies including MySQL client
-RUN apk add --no-cache bash mysql-client
+# Install dependencies including MySQL client and OpenSSL
+RUN apk add --no-cache bash mysql-client openssl
 
 # Copy package files and install dependencies
 COPY package*.json ./
@@ -14,9 +14,10 @@ RUN npm install -g web-push
 COPY . .
 
 # Set up permissions and directories
-RUN chmod +x generate_env.sh && \
-    mkdir -p uploads && \
-    mkdir -p database_dumps
+RUN chmod +x generate_env.sh scripts/init-certs.sh && \
+    mkdir -p public/uploads && \
+    mkdir -p database_dumps && \
+    mkdir -p certs
 
 # Generate VAPID keys
 RUN web-push generate-vapid-keys > vapid.json

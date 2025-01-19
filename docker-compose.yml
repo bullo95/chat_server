@@ -18,8 +18,8 @@ services:
       - MYSQL_SSL_CERT=/usr/src/app/certs/client-cert.pem
       - MYSQL_SSL_KEY=/usr/src/app/certs/client-key.pem
     volumes:
-      - ./uploads:/usr/src/app/public/uploads
-      - ./certs:/usr/src/app/certs:ro
+      - app_uploads:/usr/src/app/public/uploads
+      - mysql_certs:/usr/src/app/certs:ro
     depends_on:
       db:
         condition: service_healthy
@@ -41,9 +41,9 @@ services:
       --general-log-file=/var/log/mysql/general.log
     volumes:
       - mysql_data:/var/lib/mysql
+      - mysql_certs:/etc/mysql/ssl:ro
+      - mysql_logs:/var/log/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/database.sql
-      - ./certs:/etc/mysql/ssl:ro
-      - ./mysql_logs:/var/log/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
@@ -53,3 +53,6 @@ services:
 
 volumes:
   mysql_data:
+  mysql_certs:
+  mysql_logs:
+  app_uploads:
