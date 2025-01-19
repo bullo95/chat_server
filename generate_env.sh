@@ -1,5 +1,5 @@
 #!/bin/bash
-
+echo "Generating .env file from docker-compose.yml..."
 # Fichier .env à mettre à jour
 ENV_FILE=".env"
 
