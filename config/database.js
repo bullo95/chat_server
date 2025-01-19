@@ -171,15 +171,14 @@ async function dumpDatabase() {
 
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
-    // Commande de base sans options SSL
-    const mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
+    // Utiliser mariadb-dump au lieu de mysqldump
+    const dumpCommand = `mariadb-dump -h ${process.env.DB_HOST} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
     
-    console.log('📦 Exécution de mysqldump...');
-    const { stdout, stderr } = await exec(mysqldumpCommand);
+    console.log('📦 Exécution de mariadb-dump...');
+    const { stdout, stderr } = await exec(dumpCommand);
     
-    // Ignorer l'avertissement de dépréciation
-    if (stderr && !stderr.includes('Deprecated program name')) {
-      console.warn('⚠️ Avertissements mysqldump:', stderr);
+    if (stderr) {
+      console.warn('⚠️ Avertissements mariadb-dump:', stderr);
     }
     
     console.log(`✅ Dump de la base de données sauvegardé dans: ${dumpPath}`);

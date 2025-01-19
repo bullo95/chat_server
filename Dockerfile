@@ -2,8 +2,8 @@ FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
-# Install dependencies including MySQL client
-RUN apk add --no-cache bash mysql mysql-client
+# Install dependencies including MariaDB client
+RUN apk add --no-cache bash mariadb mariadb-client
 
 # Copy package files and install dependencies
 COPY package*.json ./
