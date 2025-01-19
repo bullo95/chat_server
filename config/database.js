@@ -10,7 +10,13 @@ const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'dating_app'
+  database: process.env.DB_NAME || 'dating_app',
+  ssl: {
+    ca: process.env.MYSQL_SSL_CA ? fs.readFileSync(process.env.MYSQL_SSL_CA) : undefined,
+    cert: process.env.MYSQL_SSL_CERT ? fs.readFileSync(process.env.MYSQL_SSL_CERT) : undefined,
+    key: process.env.MYSQL_SSL_KEY ? fs.readFileSync(process.env.MYSQL_SSL_KEY) : undefined,
+    rejectUnauthorized: true
+  }
 };
 
 // Création du pool de connexions
@@ -23,7 +29,8 @@ async function ensureDatabase() {
     const connection = await mysql.createConnection({
       host: dbConfig.host,
       user: dbConfig.user,
-      password: dbConfig.password
+      password: dbConfig.password,
+      ssl: dbConfig.ssl
     });
 
     // Créer la base de données si elle n'existe pas
@@ -171,8 +178,8 @@ async function dumpDatabase() {
 
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
-    // Construire la commande mysqldump avec les credentials de la connexion
-    const mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST || 'localhost'} -u ${process.env.DB_USER || 'root'}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME || 'dating_app'} > "${dumpPath}"`;
+    // Construire la commande mysqldump avec les credentials et SSL
+    const mysqldumpCommand = `mysqldump --ssl-ca=${process.env.MYSQL_SSL_CA} --ssl-cert=${process.env.MYSQL_SSL_CERT} --ssl-key=${process.env.MYSQL_SSL_KEY} -h ${process.env.DB_HOST || 'localhost'} -u ${process.env.DB_USER || 'root'}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME || 'dating_app'} > "${dumpPath}"`;
     
     // Exécuter mysqldump
     await exec(mysqldumpCommand);
@@ -193,6 +200,7 @@ async function waitForDatabase(maxAttempts = 30, delay = 1000) {
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
+        ssl: dbConfig.ssl
       });
       await connection.end();
       console.log('✅ Base de données prête');
