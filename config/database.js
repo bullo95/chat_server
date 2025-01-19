@@ -10,7 +10,9 @@ const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+  database: process.env.DB_NAME,
+  ssl: false,
+  sslMode: 'DISABLED'
 };
 
 // Création du pool de connexions
@@ -23,7 +25,9 @@ async function ensureDatabase() {
     const connection = await mysql.createConnection({
       host: dbConfig.host,
       user: dbConfig.user,
-      password: dbConfig.password
+      password: dbConfig.password,
+      ssl: false,
+      sslMode: 'DISABLED'
     });
 
     // Créer la base de données si elle n'existe pas
@@ -172,7 +176,7 @@ async function dumpDatabase() {
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
     // Commande mysqldump sans SSL
-    const dumpCommand = `mysqldump --protocol=TCP --column-statistics=0 -h ${process.env.DB_HOST} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
+    const dumpCommand = `mysqldump --protocol=TCP --ssl-mode=DISABLED --skip-ssl --ssl=0 -h ${process.env.DB_HOST} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
     
     console.log('📦 Exécution de mysqldump...');
     const { stdout, stderr } = await exec(dumpCommand);
@@ -198,7 +202,9 @@ async function waitForDatabase(maxAttempts = 30, delay = 1000) {
       const connection = await mysql.createConnection({
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD
+        password: process.env.DB_PASSWORD,
+        ssl: false,
+        sslMode: 'DISABLED'
       });
       
       await connection.ping();
