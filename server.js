@@ -10,8 +10,7 @@ const YAML = require('yamljs');
 const fs = require('fs');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const { initDatabase } = require('./config/database');
-const pool = require('./config/database').pool;
+const { pool, setupDatabase } = require('./config/database');
 const { router: notificationsRouter } = require('./src/routes/notifications');
 const conversationsRouter = require('./src/routes/conversations');
 const mediaRouter = require('./src/routes/media');
@@ -325,28 +324,19 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // Fonction pour initialiser la base de données
-async function setupDatabase() {
-  return new Promise((resolve) => {
-    rl.question('Voulez-vous réinitialiser la base de données ? (y/N) ', async (answer) => {
-      if (answer.toLowerCase() === 'y') {
-        try {
-          await initDatabase();
-          console.log('✅ Base de données réinitialisée avec succès');
-        } catch (error) {
-          console.error('❌ Erreur lors de la réinitialisation de la base de données:', error);
-        }
-      } else {
-        console.log('Base de données non réinitialisée');
-      }
-      resolve();
-    });
-  });
+async function setupDatabaseAndServer() {
+  try {
+    await setupDatabase();
+  } catch (error) {
+    console.error('❌ Erreur lors de la vérification/initialisation de la base de données:', error);
+    throw error;
+  }
 }
 
 // Démarrage du serveur
 async function start() {
   try {
-    await setupDatabase();
+    await setupDatabaseAndServer();
     const port = process.env.PORT;
     httpServer.listen(port, process.env.SERVER_IP, () => {
       console.log(`\n✅ V1 - Serveur démarré sur http://${process.env.SERVER_IP}:${port}`);

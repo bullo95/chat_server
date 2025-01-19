@@ -14,8 +14,17 @@ COPY . .
 # Create uploads directory
 RUN mkdir -p uploads
 
+# Copy docker-compose.yml for environment script
+COPY docker-compose.yml /usr/src/app/docker-compose.yml
+
+# Copy the environment generation script
+COPY generate_env.sh /usr/src/app/generate_env.sh
+
+# Make the script executable
+RUN chmod +x /usr/src/app/generate_env.sh
+
 # Expose port
 EXPOSE 61860
 
-# Start the application
-CMD ["npm", "start"]
+# Run the environment script and start the application
+CMD ["sh", "-c", "./generate_env.sh && npm start"]
