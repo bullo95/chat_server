@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 const fs = require('fs');
-const fsPromises = require('fs').promises;
 const path = require('path');
+const fsPromises = require('fs').promises;
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 
@@ -10,152 +10,30 @@ const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  ssl: false,
-  sslMode: 'DISABLED'
+  database: process.env.DB_NAME
 };
 
 // Création du pool de connexions
 const pool = mysql.createPool(dbConfig);
 
-// Fonction pour s'assurer que la base de données existe et est sélectionnée
-async function ensureDatabase() {
+// Fonction pour initialiser la base de données
+async function initializeDatabase() {
   try {
-    // Se connecter sans spécifier de base de données
     const connection = await mysql.createConnection({
       host: dbConfig.host,
       user: dbConfig.user,
-      password: dbConfig.password,
-      ssl: false,
-      sslMode: 'DISABLED'
+      password: dbConfig.password
     });
 
     // Créer la base de données si elle n'existe pas
-    await connection.query('CREATE DATABASE IF NOT EXISTS dating_app');
-    
-    // Fermer la connexion temporaire
+    await connection.query(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database}`);
+    console.log('✅ Base de données créée ou existante');
+
+    // Utiliser la base de données
+    await connection.query(`USE ${dbConfig.database}`);
+
+    // Fermer la connexion
     await connection.end();
-
-    // Se connecter à la base de données
-    await pool.query('USE dating_app');
-  } catch (error) {
-    console.error('❌ Erreur lors de la création/sélection de la base de données:', error);
-    throw error;
-  }
-}
-
-// Fonction pour vérifier la structure de la base de données
-async function checkDatabaseStructure() {
-  try {
-    // Vérifier si la base de données existe
-    await pool.query('USE dating_app');
-    
-    // Récupérer la liste des tables
-    const [tables] = await pool.query(`
-      SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_TYPE
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_SCHEMA = 'dating_app'
-      ORDER BY TABLE_NAME, ORDINAL_POSITION
-    `);
-
-    // Structure attendue des tables
-    const expectedTables = {
-      'users': new Set(['id', 'username', 'pin_code', 'photo_url', 'gender', 'meeting_type', 'description', 'created_at', 'updated_at']),
-      'conversations': new Set(['id', 'created_at']),
-      'conversation_participants': new Set(['conversation_id', 'user_id', 'created_at']),
-      'messages': new Set(['id', 'conversation_id', 'sender_id', 'content', 'type', 'gif_id', 'created_at'])
-    };
-
-    // Vérifier que toutes les tables et colonnes attendues existent
-    const existingTables = {};
-    tables.forEach(column => {
-      if (!existingTables[column.TABLE_NAME]) {
-        existingTables[column.TABLE_NAME] = new Set();
-      }
-      existingTables[column.TABLE_NAME].add(column.COLUMN_NAME);
-    });
-
-    // Comparer avec la structure attendue
-    for (const [tableName, expectedColumns] of Object.entries(expectedTables)) {
-      if (!existingTables[tableName]) {
-        return false;
-      }
-      for (const column of expectedColumns) {
-        if (!existingTables[tableName].has(column)) {
-          return false;
-        }
-      }
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Erreur lors de la vérification de la structure:', error);
-    return false;
-  }
-}
-
-// Fonction pour supprimer toutes les tables
-async function dropAllTables() {
-  try {
-    // Désactiver les contraintes de clés étrangères
-    await pool.query('SET FOREIGN_KEY_CHECKS = 0');
-
-    // Supprimer les tables dans l'ordre inverse des dépendances
-    const tables = ['messages', 'conversation_participants', 'conversations', 'users'];
-    for (const table of tables) {
-      await pool.query(`DROP TABLE IF EXISTS ${table}`);
-    }
-
-    // Réactiver les contraintes de clés étrangères
-    await pool.query('SET FOREIGN_KEY_CHECKS = 1');
-
-    console.log('✅ Toutes les tables ont été supprimées');
-  } catch (error) {
-    console.error('❌ Erreur lors de la suppression des tables:', error);
-    throw error;
-  }
-}
-
-// Fonction pour nettoyer une requête SQL
-function cleanSqlQuery(query) {
-  return query
-    .split('\n')
-    .filter(line => !line.trim().startsWith('--')) // Supprimer les commentaires
-    .join('\n')
-    .trim();
-}
-
-// Fonction pour initialiser la base de données
-async function initDatabase() {
-  try {
-    // S'assurer que la base de données existe
-    await ensureDatabase();
-
-    // Supprimer toutes les tables existantes
-    await dropAllTables();
-
-    // Lire et exécuter le fichier SQL
-    console.log('🔄 Exécution du fichier database.sql...');
-    const sqlPath = path.join(__dirname, '..', 'database.sql');
-    const sqlContent = await fsPromises.readFile(sqlPath, 'utf8');
-
-    // Diviser le contenu en requêtes individuelles et les exécuter
-    const queries = sqlContent
-      .split(';')
-      .map(cleanSqlQuery)
-      .filter(query => query.length > 0);
-
-    // Exécuter les requêtes dans l'ordre
-    for (const query of queries) {
-      try {
-        await pool.query(query);
-      } catch (error) {
-        console.error('❌ Erreur lors de l\'exécution de la requête:', query);
-        throw error;
-      }
-    }
-
-    console.log('✅ Base de données initialisée avec succès');
   } catch (error) {
     console.error('❌ Erreur lors de l\'initialisation de la base de données:', error);
     throw error;
@@ -175,8 +53,8 @@ async function dumpDatabase() {
 
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
     
-    // Commande mysqldump sans SSL
-    const dumpCommand = `mysqldump --protocol=TCP --ssl-mode=DISABLED --skip-ssl --ssl=0 -h ${process.env.DB_HOST} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
+    // Commande mysqldump simplifiée
+    const dumpCommand = `mysqldump -h ${process.env.DB_HOST} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
     
     console.log('📦 Exécution de mysqldump...');
     const { stdout, stderr } = await exec(dumpCommand);
@@ -202,9 +80,7 @@ async function waitForDatabase(maxAttempts = 30, delay = 1000) {
       const connection = await mysql.createConnection({
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        ssl: false,
-        sslMode: 'DISABLED'
+        password: process.env.DB_PASSWORD
       });
       
       await connection.ping();
@@ -228,31 +104,8 @@ async function waitForDatabase(maxAttempts = 30, delay = 1000) {
 async function setupDatabase() {
   try {
     await waitForDatabase();
-    const isValid = await checkDatabaseStructure();
-    if (!isValid) {
-      console.log('❗ Structure de la base de données non conforme');
-      try {
-        // Faire un dump avant la réinitialisation
-        const dumpPath = await dumpDatabase();
-        console.log('✅ Sauvegarde de la base de données effectuée');
-        
-        // Réinitialiser la base de données
-        console.log('🔄 Réinitialisation de la base de données...');
-        await initDatabase();
-        console.log('✅ Base de données réinitialisée avec succès');
-      } catch (error) {
-        if (error.code === 'ER_BAD_DB_ERROR') {
-          // La base de données n'existe pas encore, pas besoin de faire un dump
-          console.log('📝 Première initialisation de la base de données...');
-          await initDatabase();
-          console.log('✅ Base de données initialisée avec succès');
-        } else {
-          throw error;
-        }
-      }
-    } else {
-      console.log('✅ Structure de la base de données conforme');
-    }
+    await initializeDatabase();
+    await dumpDatabase();
   } catch (error) {
     console.error('❌ Erreur lors de la vérification/initialisation de la base de données:', error);
     throw error;
@@ -261,8 +114,6 @@ async function setupDatabase() {
 
 module.exports = {
   pool,
-  initDatabase,
-  checkDatabaseStructure,
-  dumpDatabase,
-  setupDatabase
+  setupDatabase,
+  dumpDatabase
 };
