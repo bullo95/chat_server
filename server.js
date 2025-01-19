@@ -9,6 +9,29 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const YAML = require('yamljs');
 const fs = require('fs');
 require('dotenv').config();
+
+// Vérifier les variables d'environnement requises
+const requiredEnvVars = [
+  'PORT',
+  'DB_HOST',
+  'DB_USER',
+  'DB_PASSWORD',
+  'DB_NAME',
+  'PUBLIC_VAPID_KEY',
+  'PRIVATE_VAPID_KEY',
+  'EMAIL',
+  'SERVER_IP'
+];
+
+console.log('🔍 Vérification des variables d\'environnement...');
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingVars.length > 0) {
+  console.error('❌ Variables d\'environnement manquantes:', missingVars.join(', '));
+  console.log('Variables disponibles:', process.env);
+  process.exit(1);
+}
+console.log('✅ Toutes les variables d\'environnement sont présentes');
+
 const jwt = require('jsonwebtoken');
 const { pool, setupDatabase } = require('./config/database');
 const { router: notificationsRouter } = require('./src/routes/notifications');

@@ -7,12 +7,31 @@ const auth = require('../middleware/auth');
 // Configure web-push
 const publicVapidKey = process.env.PUBLIC_VAPID_KEY;
 const privateVapidKey = process.env.PRIVATE_VAPID_KEY;
+const email = process.env.EMAIL || 'example@example.com';
 
-webpush.setVapidDetails(
-  'mailto:' + process.env.EMAIL,
-  publicVapidKey,
-  privateVapidKey
-);
+// Vérifier les clés VAPID
+if (!publicVapidKey || !privateVapidKey) {
+  console.error('❌ Erreur: Les clés VAPID ne sont pas définies dans les variables d\'environnement');
+  console.log('Variables d\'environnement disponibles:', process.env);
+  process.exit(1);
+}
+
+console.log('🔑 Configuration des clés VAPID...');
+console.log('Email:', email);
+console.log('Public Key:', publicVapidKey);
+console.log('Private Key:', privateVapidKey);
+
+try {
+  webpush.setVapidDetails(
+    'mailto:' + email,
+    publicVapidKey,
+    privateVapidKey
+  );
+  console.log('✅ Configuration VAPID réussie');
+} catch (error) {
+  console.error('❌ Erreur lors de la configuration VAPID:', error);
+  process.exit(1);
+}
 
 // Store subscription
 router.post('/subscribe', auth, async (req, res) => {
