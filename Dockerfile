@@ -28,4 +28,4 @@ EXPOSE 61860
 
 
 # Run the environment script and start the application
-CMD ["sh", "-c", "./generate_env.sh && npm start"]
+CMD ["sh", "-c", "./generate_env.sh && echo '📄 Contenu du fichier .env:' && cat .env && echo '\n🚀 Démarrage du serveur...' && npm start"]
