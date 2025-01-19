@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build: .
@@ -8,9 +10,6 @@ services:
       - DB_USER=root
       - DB_PASSWORD=tcukeb6-tcukeb6
       - DB_NAME=dating_app
-      - MYSQL_SSL_CA=/usr/src/app/certs/ca-cert.pem
-      - MYSQL_SSL_CERT=/usr/src/app/certs/client-cert.pem
-      - MYSQL_SSL_KEY=/usr/src/app/certs/client-key.pem
       - GIPHY_API_KEY=${GIPHY_API_KEY:-dummy_key}
       - SERVER_IP=${SERVER_IP:-localhost}
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
@@ -18,7 +17,6 @@ services:
       - EMAIL=${EMAIL:-test@example.com}
     volumes:
       - app_uploads:/usr/src/app/public/uploads
-      - mysql_certs:/usr/src/app/certs:ro
     depends_on:
       db:
         condition: service_healthy
@@ -30,19 +28,12 @@ services:
       MYSQL_DATABASE: dating_app
     ports:
       - "3306:3306"
-    command: >
-      --ssl-ca=/etc/mysql/ssl/ca-cert.pem
-      --ssl-cert=/etc/mysql/ssl/server-cert.pem
-      --ssl-key=/etc/mysql/ssl/server-key.pem
-      --require-secure-transport=OFF
-      --log-error=/var/log/mysql/error.log
-      --general-log=1
-      --general-log-file=/var/log/mysql/general.log
     volumes:
       - mysql_data:/var/lib/mysql
-      - mysql_certs:/etc/mysql/ssl:ro
-      - mysql_logs:/var/log/mysql
+      - ./mysql-init.sh:/mysql-init.sh
       - ./database.sql:/docker-entrypoint-initdb.d/database.sql
+      - mysql_logs:/var/log/mysql
+    command: /mysql-init.sh
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
@@ -52,6 +43,5 @@ services:
 
 volumes:
   mysql_data:
-  mysql_certs:
   mysql_logs:
   app_uploads:

@@ -5,37 +5,15 @@ const path = require('path');
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 
-// Configuration SSL
-const sslConfig = (() => {
-  try {
-    if (process.env.MYSQL_SSL_CA && process.env.MYSQL_SSL_CERT && process.env.MYSQL_SSL_KEY) {
-      if (fs.existsSync(process.env.MYSQL_SSL_CA) && 
-          fs.existsSync(process.env.MYSQL_SSL_CERT) && 
-          fs.existsSync(process.env.MYSQL_SSL_KEY)) {
-        console.log('✅ Certificats SSL trouvés, activation de SSL');
-        return {
-          ca: fs.readFileSync(process.env.MYSQL_SSL_CA),
-          cert: fs.readFileSync(process.env.MYSQL_SSL_CERT),
-          key: fs.readFileSync(process.env.MYSQL_SSL_KEY),
-          rejectUnauthorized: true
-        };
-      }
-    }
-    console.log('⚠️ Certificats SSL non trouvés, connexion sans SSL');
-    return undefined;
-  } catch (error) {
-    console.warn('⚠️ Erreur lors de la lecture des certificats SSL:', error.message);
-    return undefined;
-  }
-})();
-
 // Configuration de la base de données
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'dating_app',
-  ssl: sslConfig
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  ssl: {
+    rejectUnauthorized: false
+  }
 };
 
 // Création du pool de connexions
@@ -201,7 +179,7 @@ async function dumpDatabase() {
     let mysqldumpCommand = `mysqldump -h ${process.env.DB_HOST} -u ${process.env.DB_USER}${process.env.DB_PASSWORD ? ` -p${process.env.DB_PASSWORD}` : ''} ${process.env.DB_NAME}`;
     
     // Ajouter les options SSL si les certificats sont disponibles
-    if (fs.existsSync(process.env.MYSQL_SSL_CA)) {
+    if (process.env.MYSQL_SSL_CA) {
       console.log('🔒 Utilisation de SSL pour mysqldump');
       mysqldumpCommand += ` --ssl-mode=VERIFY_CA`;
       mysqldumpCommand += ` --ssl-ca=${process.env.MYSQL_SSL_CA}`;
@@ -245,7 +223,7 @@ async function waitForDatabase(maxAttempts = 30, delay = 1000) {
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
-        ssl: sslConfig
+        ssl: dbConfig.ssl
       });
       
       // Test the connection
