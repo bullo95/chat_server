@@ -39,8 +39,9 @@ services:
       - DB_USER=root
       - DB_PASSWORD=tcukeb6-tcukeb6
       - DB_NAME=dating_app
+      - DOMAIN=bdomenech.freeboxos.fr
+      - SERVER_IP=bdomenech.freeboxos.fr
       - GIPHY_API_KEY=${GIPHY_API_KEY:-dummy_key}
-      - SERVER_IP=${SERVER_IP:-localhost}
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
       - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-dummy_key}
       - EMAIL=${EMAIL:-test@example.com}

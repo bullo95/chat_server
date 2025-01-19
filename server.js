@@ -122,13 +122,22 @@ const swaggerSpec = swaggerJsDoc(swaggerOptions);
 
 const app = express();
 
-// CORS configuration
-app.use(cors({
-  origin: true,
+// Configuration CORS
+const corsOptions = {
+  origin: [
+    `http://${process.env.DOMAIN}`,
+    `https://${process.env.DOMAIN}`,
+    `http://${process.env.DOMAIN}:61860`,
+    `https://${process.env.DOMAIN}:61860`,
+    'http://localhost:3000',
+    'http://localhost:61860'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -139,12 +148,10 @@ const httpServer = createServer(app);
 // Initialize Socket.IO with CORS
 const io = new Server(httpServer, {
   cors: {
-    origin: true,
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: corsOptions.origin,
+    methods: corsOptions.methods,
     credentials: true
-  },
-  transports: ['websocket', 'polling']
+  }
 });
 
 // Make io accessible to routes
@@ -410,9 +417,12 @@ async function start() {
   try {
     await setupDatabaseAndServer();
     const port = process.env.PORT;
-    httpServer.listen(port, process.env.SERVER_IP, () => {
-      console.log(`\n✅ V1 - Serveur démarré sur http://${process.env.SERVER_IP}:${port}`);
-      console.log(`📚 Documentation API disponible sur http://${process.env.SERVER_IP}:${port}/api-docs`);
+    const domain = process.env.DOMAIN || process.env.SERVER_IP;
+    
+    httpServer.listen(port, '0.0.0.0', () => {
+      console.log(`\n✅ V1 - Serveur démarré sur http://${domain}:${port}`);
+      console.log(`📚 Documentation API disponible sur http://${domain}:${port}/api-docs`);
+      console.log(`🌐 Domaine configuré: ${domain}`);
     });
   } catch (error) {
     console.error('❌ Erreur lors du démarrage:', error);
