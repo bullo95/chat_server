@@ -9,6 +9,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./mysql/certs:/etc/mysql/certs
     ports:
       - "3306:3306"
     command: >
@@ -18,8 +19,11 @@ services:
       --require-secure-transport=OFF
       --bind-address=0.0.0.0
       --max-connections=1000
+      --performance-schema=ON
+      --performance-schema-instrument='%=ON'
+      --skip-name-resolve
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptcukeb6-tcukeb6"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-ptcukeb6-tcukeb6"]
       interval: 10s
       timeout: 10s
       retries: 5
