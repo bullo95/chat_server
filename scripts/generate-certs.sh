@@ -17,10 +17,16 @@ openssl x509 -req -in server-req.pem -days 365000 -CA ca-cert.pem -CAkey ca-key.
 openssl req -newkey rsa:2048 -nodes -days 365000 -keyout client-key.pem -out client-req.pem -subj "/CN=MySQL_Client"
 
 # Generate client certificate
-openssl x509 -req -in client-req.pem -days 365000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 -out client-cert.pem
+openssl x509 -req -in client-req.pem -days 365000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 02 -out client-cert.pem
 
 # Verify certificates
 openssl verify -CAfile ca-cert.pem server-cert.pem client-cert.pem
 
 # Set correct permissions
-chmod 644 *.pem
+chmod 600 server-key.pem client-key.pem
+chmod 644 ca-cert.pem server-cert.pem client-cert.pem
+
+# Clean up temporary files
+rm -f server-req.pem client-req.pem
+
+echo "Certificates generated successfully in the certs directory."
