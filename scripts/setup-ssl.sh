@@ -2,53 +2,31 @@
 
 # Configuration variables
 DOMAIN="bdomenech.freeboxos.fr"
-EMAIL="test@example.com"  # Change this to your email
-CERTBOT_PATH="/etc/letsencrypt/live/$DOMAIN"
+EMAIL="domenech.bruno@me.com"  # Change this to your email
 
-# Install certbot if not present
-if ! command -v certbot &> /dev/null; then
-    echo "Installing certbot..."
-    apk add --no-cache certbot
-fi
+# Create directory for certificates
+mkdir -p /usr/src/app/ssl
 
-# Create directory for certificates if it doesn't exist
-mkdir -p /etc/letsencrypt
-mkdir -p /var/lib/letsencrypt
-mkdir -p /var/log/letsencrypt
+# Register account
+~/.acme.sh/acme.sh --register-account -m $EMAIL
 
-# Request certificate
-echo "Requesting SSL certificate for $DOMAIN..."
-certbot certonly \
-    --standalone \
-    --preferred-challenges http \
-    --agree-tos \
-    --email $EMAIL \
-    --domain $DOMAIN \
-    --non-interactive
+# Issue certificate using standalone mode
+~/.acme.sh/acme.sh --issue \
+  -d $DOMAIN \
+  --standalone \
+  --server letsencrypt \
+  --keylength 2048
 
-# Check if certificate was obtained successfully
-if [ -d "$CERTBOT_PATH" ]; then
-    echo "SSL certificate obtained successfully!"
-    
-    # Create ssl directory if it doesn't exist
-    mkdir -p /usr/src/app/ssl
-    
-    # Copy certificates to app directory
-    cp "$CERTBOT_PATH/privkey.pem" /usr/src/app/ssl/
-    cp "$CERTBOT_PATH/fullchain.pem" /usr/src/app/ssl/
-    
-    # Set proper permissions
-    chmod 600 /usr/src/app/ssl/privkey.pem
-    chmod 600 /usr/src/app/ssl/fullchain.pem
-    
-    echo "Certificates copied to /usr/src/app/ssl/"
-else
-    echo "Failed to obtain SSL certificate"
-    exit 1
-fi
+# Install certificate
+~/.acme.sh/acme.sh --install-cert -d $DOMAIN \
+  --key-file /usr/src/app/ssl/privkey.pem \
+  --fullchain-file /usr/src/app/ssl/fullchain.pem
 
-# Set up auto-renewal
-echo "Setting up auto-renewal..."
-(crontab -l 2>/dev/null; echo "0 0 1 * * certbot renew --quiet") | crontab -
+# Set proper permissions
+chmod 600 /usr/src/app/ssl/privkey.pem
+chmod 600 /usr/src/app/ssl/fullchain.pem
+
+# Setup auto-renewal (acme.sh handles this automatically)
+~/.acme.sh/acme.sh --upgrade --auto-upgrade
 
 echo "SSL setup completed!"
