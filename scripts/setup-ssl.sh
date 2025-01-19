@@ -3,6 +3,7 @@
 # Configuration variables
 DOMAIN="bdomenech.freeboxos.fr"
 EMAIL="domenech.bruno@me.com"  # Change this to your email
+ACME_PORT="${ACME_PORT:-8080}"
 
 # Create directory for certificates
 mkdir -p /usr/src/app/ssl
@@ -14,6 +15,7 @@ mkdir -p /usr/src/app/ssl
 ~/.acme.sh/acme.sh --issue \
   -d $DOMAIN \
   --standalone \
+  --httpport $ACME_PORT \
   --server letsencrypt \
   --keylength 2048
 

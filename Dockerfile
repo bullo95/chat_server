@@ -35,8 +35,8 @@ RUN web-push generate-vapid-keys > vapid.json && \
     echo "PUBLIC_VAPID_KEY=$PUBLIC_VAPID_KEY" > .env && \
     echo "PRIVATE_VAPID_KEY=$PRIVATE_VAPID_KEY" >> .env
 
-# Expose ports for HTTP and HTTPS
-EXPOSE 61860 443 80
+# Expose ports for HTTP, HTTPS, and ACME
+EXPOSE 61860 443 8080
 
 # Run the application with SSL setup
 CMD ["/bin/bash", "-c", "./scripts/setup-ssl.sh && ./generate_env.sh && npm start"]
