@@ -23,8 +23,8 @@ echo "Vérification des clés VAPID..."
 if [ -z "$PUBLIC_VAPID_KEY" ] || [ -z "$PRIVATE_VAPID_KEY" ]; then
     if [ -f "vapid.json" ]; then
         echo "Utilisation des clés VAPID depuis vapid.json..."
-        PUBLIC_VAPID_KEY=$(cat vapid.json | grep 'Public Key:' | cut -d' ' -f3)
-        PRIVATE_VAPID_KEY=$(cat vapid.json | grep 'Private Key:' | cut -d' ' -f3)
+        PUBLIC_VAPID_KEY=$(sed -n '/Public Key:/,/^$/p' vapid.json | tail -n 2 | head -n 1)
+        PRIVATE_VAPID_KEY=$(sed -n '/Private Key:/,/^$/p' vapid.json | tail -n 2 | head -n 1)
     else
         echo "Génération de nouvelles clés VAPID..."
         VAPID_KEYS=$(web-push generate-vapid-keys)
@@ -40,11 +40,11 @@ if [ -z "$PUBLIC_VAPID_KEY" ] || [ -z "$PRIVATE_VAPID_KEY" ]; then
 fi
 
 # Extraction des variables de docker-compose.yml
-PORT=$(grep -A 1 'ports:' "$COMPOSE_FILE" | grep -oE '[0-9]+(?=:)' | head -1)
+PORT=61860
 DB_HOST="db"
 DB_USER="root"
-DB_PASSWORD=$(grep -A 1 'MYSQL_ROOT_PASSWORD' "$COMPOSE_FILE" | grep -oE '[^ ]+$' | tr -d '"')
-DB_NAME=$(grep -A 1 'MYSQL_DATABASE' "$COMPOSE_FILE" | grep -oE '[^ ]+$' | tr -d '"')
+DB_PASSWORD="tcukeb6-tcukeb6"
+DB_NAME="dating_app"
 GIPHY_API_KEY=${GIPHY_API_KEY:-"votre_api_key_giphy"}
 SERVER_IP=${SERVER_IP:-"127.0.0.1"}
 EMAIL=${EMAIL:-"your_email@example.com"}
