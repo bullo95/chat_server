@@ -12,10 +12,11 @@ const fs = require('fs');
 // Vérifier la présence du fichier .env
 const envPath = path.join(__dirname, '.env');
 if (!fs.existsSync(envPath)) {
-  console.error('❌ Erreur: Fichier .env non trouvé');
-  console.log('ℹ️ Veuillez créer un fichier .env à partir du modèle .env.example');
-  console.log('💡 Vous pouvez aussi utiliser le script : ./generate_env.sh');
-  process.exit(1);
+  console.warn('⚠️ Fichier .env non trouvé');
+  console.log('ℹ️ Utilisation des valeurs par défaut');
+  console.log('💡 Pour une configuration personnalisée :');
+  console.log('  1. Créez un fichier .env à partir du modèle .env.example');
+  console.log('  2. Ou utilisez le script : ./generate_env.sh');
 }
 
 require('dotenv').config();
@@ -26,8 +27,8 @@ Object.keys(process.env).sort().forEach(key => {
   // Ne pas afficher les valeurs sensibles en entier
   const value = process.env[key];
   const displayValue = key.includes('KEY') || key.includes('PASSWORD') 
-    ? `${value.substring(0, 4)}...${value.substring(value.length - 4)}`
-    : value;
+    ? value ? `${value.substring(0, 4)}...${value.substring(value.length - 4)}` : '(vide)'
+    : value || '(vide)';
   console.log(`${key}=${displayValue}`);
 });
 
@@ -37,23 +38,38 @@ const requiredEnvVars = [
   'DB_HOST',
   'DB_USER',
   'DB_NAME',
-  'PUBLIC_VAPID_KEY',
-  'PRIVATE_VAPID_KEY',
-  'EMAIL',
   'SERVER_IP'
 ];
 
 // Variables qui peuvent être vides
-const optionalEmptyVars = ['DB_PASSWORD'];
+const optionalEmptyVars = ['DB_PASSWORD', 'PUBLIC_VAPID_KEY', 'PRIVATE_VAPID_KEY', 'EMAIL', 'GIPHY_API_KEY'];
 
-console.log('🔍 Vérification des variables d\'environnement...');
+console.log('\n🔍 Vérification des variables d\'environnement...');
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missingVars.length > 0) {
-  console.error('❌ Variables d\'environnement manquantes:', missingVars.join(', '));
-  console.log('Variables disponibles:', process.env);
-  process.exit(1);
+  console.warn('⚠️ Variables d\'environnement manquantes:', missingVars.join(', '));
+  console.log('ℹ️ Utilisation des valeurs par défaut :');
+  missingVars.forEach(varName => {
+    switch(varName) {
+      case 'PORT':
+        process.env.PORT = '3000';
+        break;
+      case 'DB_HOST':
+        process.env.DB_HOST = 'localhost';
+        break;
+      case 'DB_USER':
+        process.env.DB_USER = 'root';
+        break;
+      case 'DB_NAME':
+        process.env.DB_NAME = 'dating_app';
+        break;
+      case 'SERVER_IP':
+        process.env.SERVER_IP = '127.0.0.1';
+        break;
+    }
+    console.log(`  ${varName}=${process.env[varName]}`);
+  });
 }
-console.log('✅ Toutes les variables d\'environnement requises sont présentes');
 
 // Initialiser les variables optionnelles si elles sont vides
 optionalEmptyVars.forEach(varName => {
@@ -62,6 +78,8 @@ optionalEmptyVars.forEach(varName => {
     console.log(`ℹ️ Variable optionnelle ${varName} initialisée avec une valeur vide`);
   }
 });
+
+console.log('✅ Configuration de base terminée\n');
 
 const jwt = require('jsonwebtoken');
 const { pool, setupDatabase } = require('./config/database');
@@ -398,7 +416,6 @@ async function start() {
     });
   } catch (error) {
     console.error('❌ Erreur lors du démarrage:', error);
-    process.exit(1);
   }
 }
 
