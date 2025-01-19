@@ -14,12 +14,12 @@ services:
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY}
       - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY}
       - EMAIL=${EMAIL}
-      - MYSQL_SSL_CA=/etc/mysql/ssl/ca-cert.pem
-      - MYSQL_SSL_CERT=/etc/mysql/ssl/client-cert.pem
-      - MYSQL_SSL_KEY=/etc/mysql/ssl/client-key.pem
+      - MYSQL_SSL_CA=/usr/src/app/certs/ca-cert.pem
+      - MYSQL_SSL_CERT=/usr/src/app/certs/client-cert.pem
+      - MYSQL_SSL_KEY=/usr/src/app/certs/client-key.pem
     volumes:
-      - ./uploads:/usr/src/app/uploads
-      - ./certs:/etc/mysql/ssl:ro
+      - ./uploads:/usr/src/app/public/uploads
+      - ./certs:/usr/src/app/certs:ro
     depends_on:
       db:
         condition: service_healthy
