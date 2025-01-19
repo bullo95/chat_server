@@ -11,17 +11,15 @@ RUN npm install
 # Install web-push globally for key generation
 RUN npm install -g web-push
 
+# Copy generate_env.sh first and set permissions
+COPY generate_env.sh ./
+RUN chmod +x ./generate_env.sh
+
 # Copy application source
 COPY . .
 
 # Create uploads directory
 RUN mkdir -p uploads
-
-# Copy the environment generation script
-COPY generate_env.sh /usr/src/app/generate_env.sh
-
-# Make the script executable
-RUN chmod +x /usr/src/app/generate_env.sh
 
 # Generate VAPID keys and environment file
 RUN web-push generate-vapid-keys > vapid.json
