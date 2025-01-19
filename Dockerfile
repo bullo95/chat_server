@@ -11,15 +11,17 @@ RUN npm install
 # Install web-push globally for key generation
 RUN npm install -g web-push
 
-# Copy generate_env.sh first and set permissions
-COPY generate_env.sh ./
-RUN chmod +x ./generate_env.sh
-
 # Copy application source
 COPY . .
 
 # Create uploads directory
 RUN mkdir -p uploads
+
+# Copy the environment generation script
+COPY generate_env.sh /usr/src/app/generate_env.sh
+
+# Make the script executable
+RUN chmod +x /usr/src/app/generate_env.sh && ls -la /usr/src/app/generate_env.sh
 
 # Generate VAPID keys and environment file
 RUN web-push generate-vapid-keys > vapid.json
@@ -28,4 +30,4 @@ RUN web-push generate-vapid-keys > vapid.json
 EXPOSE 61860
 
 # Run the environment script and start the application
-CMD ["sh", "-c", "export PUBLIC_VAPID_KEY=$(grep -A 1 'Public Key:' vapid.json | tail -n 1) && export PRIVATE_VAPID_KEY=$(grep -A 1 'Private Key:' vapid.json | tail -n 1) && ./generate_env.sh && echo '📄 Contenu du fichier .env:' && cat .env && echo '\n🚀 Démarrage du serveur...' && npm start"]
+CMD ["sh", "-c", "export PUBLIC_VAPID_KEY=$(grep -A 1 'Public Key:' vapid.json | tail -n 1) && export PRIVATE_VAPID_KEY=$(grep -A 1 'Private Key:' vapid.json | tail -n 1) && /usr/src/app/generate_env.sh && echo '📄 Contenu du fichier .env:' && cat .env && echo '\n🚀 Démarrage du serveur...' && npm start"]
