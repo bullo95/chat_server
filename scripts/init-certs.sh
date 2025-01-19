@@ -27,3 +27,10 @@ chmod 644 /etc/mysql/ssl/*-cert.pem
 rm -f /etc/mysql/ssl/*-req.pem
 
 echo "SSL certificates generated successfully."
+
+# Generate environment file if it doesn't exist
+./generate_env.sh
+
+# Start the Node.js application
+echo "Starting Node.js application..."
+exec npm start

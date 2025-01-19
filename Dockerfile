@@ -23,8 +23,10 @@ COPY . .
 # Create required directories
 RUN mkdir -p /usr/src/app/ssl \
     /usr/src/app/public/uploads \
-    /usr/src/app/database_dumps \
-    && chmod +x /usr/src/app/scripts/*.sh
+    /usr/src/app/database_dumps
+
+# Make scripts executable
+RUN chmod +x scripts/*.sh generate_env.sh
 
 # Install acme.sh
 RUN curl https://get.acme.sh | sh -s email=domenech.bruno@me.com
