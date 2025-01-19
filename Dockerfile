@@ -8,6 +8,9 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
+# Install web-push globally for key generation
+RUN npm install -g web-push
+
 # Copy application source
 COPY . .
 
@@ -28,4 +31,4 @@ EXPOSE 61860
 
 
 # Run the environment script and start the application
-CMD ["sh", "-c", "./generate_env.sh && echo '📄 Contenu du fichier .env:' && cat .env && echo '\n🚀 Démarrage du serveur...' && npm start"]
+CMD ["sh", "-c", "web-push generate-vapid-keys > vapid.json && export PUBLIC_VAPID_KEY=$(cat vapid.json | grep 'Public Key:' | cut -d' ' -f3) && export PRIVATE_VAPID_KEY=$(cat vapid.json | grep 'Private Key:' | cut -d' ' -f3) && ./generate_env.sh && echo '📄 Contenu du fichier .env:' && cat .env && echo '\n🚀 Démarrage du serveur...' && npm start"]

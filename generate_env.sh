@@ -15,18 +15,28 @@ fi
 # Sauvegarde de l'ancien .env si nécessaire
 if [ -f "$ENV_FILE" ]; then
     mv "$ENV_FILE" "${ENV_FILE}.bak"
-    echo "Ancien fichier .env sauvegardé dans ${ENV_FILE}.bak"
+    echo "Sauvegarde de l'ancien .env effectuée"
 fi
 
-# Vérifier et générer les clés VAPID si nécessaires
+# Vérifier les clés VAPID
+echo "Vérification des clés VAPID..."
 if [ -z "$PUBLIC_VAPID_KEY" ] || [ -z "$PRIVATE_VAPID_KEY" ]; then
-    echo "Clés VAPID manquantes. Génération de nouvelles clés..."
-    VAPID_KEYS=$(npx web-push generate-vapid-keys)
-    PUBLIC_VAPID_KEY=$(echo "$VAPID_KEYS" | grep "Public Key" | awk '{print $3}')
-    PRIVATE_VAPID_KEY=$(echo "$VAPID_KEYS" | grep "Private Key" | awk '{print $3}')
-    echo "Clés VAPID générées avec succès."
-else
-    echo "Clés VAPID existantes détectées."
+    if [ -f "vapid.json" ]; then
+        echo "Utilisation des clés VAPID depuis vapid.json..."
+        PUBLIC_VAPID_KEY=$(cat vapid.json | grep 'Public Key:' | cut -d' ' -f3)
+        PRIVATE_VAPID_KEY=$(cat vapid.json | grep 'Private Key:' | cut -d' ' -f3)
+    else
+        echo "Génération de nouvelles clés VAPID..."
+        VAPID_KEYS=$(web-push generate-vapid-keys)
+        PUBLIC_VAPID_KEY=$(echo "$VAPID_KEYS" | grep "Public Key:" | cut -d' ' -f3)
+        PRIVATE_VAPID_KEY=$(echo "$VAPID_KEYS" | grep "Private Key:" | cut -d' ' -f3)
+    fi
+    
+    if [ -z "$PUBLIC_VAPID_KEY" ] || [ -z "$PRIVATE_VAPID_KEY" ]; then
+        echo " Erreur : Impossible de générer ou récupérer les clés VAPID"
+        exit 1
+    fi
+    echo " Clés VAPID configurées avec succès"
 fi
 
 # Extraction des variables de docker-compose.yml
@@ -54,4 +64,6 @@ PRIVATE_VAPID_KEY=$PRIVATE_VAPID_KEY
 EMAIL=$EMAIL
 EOL
 
-echo "Fichier .env mis à jour avec les données du docker-compose.yml."
+echo " Fichier .env mis à jour avec succès"
+echo " Contenu du fichier .env :"
+cat "$ENV_FILE"
