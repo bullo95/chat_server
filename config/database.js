@@ -170,45 +170,16 @@ async function dumpDatabase() {
     }
 
     const dumpPath = path.join(dumpDir, `dump_${timestamp}.sql`);
-    const connection = await mysql.createConnection(dbConfig);
     
-    console.log('📦 Création du dump de la base de données...');
+    // Utiliser mariadb-dump au lieu de mysqldump
+    const dumpCommand = `mariadb-dump -h ${process.env.DB_HOST} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
     
-    // Obtenir la liste des tables
-    const [tables] = await connection.query('SHOW TABLES');
-    let dumpContent = '';
+    console.log('📦 Exécution de mariadb-dump...');
+    const { stdout, stderr } = await exec(dumpCommand);
     
-    // Pour chaque table
-    for (const tableRow of tables) {
-      const tableName = tableRow[`Tables_in_${dbConfig.database}`];
-      console.log(`📑 Traitement de la table: ${tableName}`);
-      
-      // Obtenir la structure de la table
-      const [createTable] = await connection.query(`SHOW CREATE TABLE ${tableName}`);
-      dumpContent += `DROP TABLE IF EXISTS \`${tableName}\`;\n`;
-      dumpContent += createTable[0]['Create Table'] + ';\n\n';
-      
-      // Obtenir les données
-      const [rows] = await connection.query(`SELECT * FROM ${tableName}`);
-      if (rows.length > 0) {
-        const columns = Object.keys(rows[0]);
-        const values = rows.map(row => {
-          return '(' + columns.map(column => {
-            const value = row[column];
-            if (value === null) return 'NULL';
-            if (typeof value === 'number') return value;
-            return `'${value.toString().replace(/'/g, "''")}'`;
-          }).join(', ') + ')';
-        });
-        
-        dumpContent += `INSERT INTO \`${tableName}\` (\`${columns.join('`, `')}\`) VALUES\n`;
-        dumpContent += values.join(',\n') + ';\n\n';
-      }
+    if (stderr) {
+      console.warn('⚠️ Avertissements mariadb-dump:', stderr);
     }
-    
-    // Écrire le fichier de dump
-    await fsPromises.writeFile(dumpPath, dumpContent, 'utf8');
-    await connection.end();
     
     console.log(`✅ Dump de la base de données sauvegardé dans: ${dumpPath}`);
     return dumpPath;
