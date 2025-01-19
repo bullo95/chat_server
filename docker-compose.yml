@@ -7,6 +7,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
       MYSQL_DATABASE: dating_app
+      MYSQL_SSL_MODE: DISABLED
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -16,7 +17,11 @@ services:
       --default-authentication-plugin=mysql_native_password
       --ssl=0
       --skip-ssl
+      --ssl-mode=DISABLED
       --require-secure-transport=OFF
+      --skip-ssl-setup
+      --ssl-cipher=
+      --tls-version=
 
   app:
     build:
@@ -32,6 +37,7 @@ services:
       - DB_USER=root
       - DB_PASSWORD=tcukeb6-tcukeb6
       - DB_NAME=dating_app
+      - MYSQL_SSL_MODE=DISABLED
       - MYSQL_ATTR_SSL_VERIFY_SERVER_CERT=false
       - GIPHY_API_KEY=${GIPHY_API_KEY:-dummy_key}
       - SERVER_IP=${SERVER_IP:-localhost}

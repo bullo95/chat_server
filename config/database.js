@@ -22,13 +22,22 @@ const dbConfig = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  ssl: {
-    rejectUnauthorized: false
+  ssl: false,
+  sslMode: 'DISABLED',
+  authPlugins: {
+    mysql_native_password: () => () => {
+      return Buffer.from([0]);
+    }
   }
 };
 
 // Création du pool de connexions
-const pool = mysql.createPool(dbConfig);
+const pool = mysql.createPool({
+  ...dbConfig,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
 
 // Fonction pour initialiser la base de données
 async function initializeDatabase() {
@@ -37,8 +46,12 @@ async function initializeDatabase() {
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      ssl: {
-        rejectUnauthorized: false
+      ssl: false,
+      sslMode: 'DISABLED',
+      authPlugins: {
+        mysql_native_password: () => () => {
+          return Buffer.from([0]);
+        }
       }
     });
 
@@ -74,10 +87,12 @@ async function dumpDatabase() {
     const dbIP = await getMySQLContainerIP();
     console.log(`📍 IP du conteneur MySQL: ${dbIP}`);
     
-    // Utiliser mariadb-dump avec toutes les options SSL désactivées
-    const dumpCommand = `mariadb-dump --skip-ssl --ssl-mode=DISABLED --ssl-verify-server-cert=OFF -h ${dbIP} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > "${dumpPath}"`;
+    // Utiliser le chemin absolu vers mariadb-dump et désactiver SSL de toutes les façons possibles
+    const dumpCommand = `/usr/bin/mariadb-dump --skip-ssl --ssl=0 --ssl-mode=DISABLED --ssl-verify-server-cert=FALSE --no-defaults -h ${dbIP} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} --protocol=TCP ${process.env.DB_NAME} > "${dumpPath}"`;
     
     console.log('📦 Exécution de mariadb-dump...');
+    console.log('Commande:', dumpCommand);
+    
     const { stdout, stderr } = await exec(dumpCommand);
     
     if (stderr && !stderr.includes('Warning') && !stderr.includes('Deprecated')) {
@@ -88,6 +103,9 @@ async function dumpDatabase() {
     return dumpPath;
   } catch (error) {
     console.error('❌ Erreur lors du dump de la base de données:', error);
+    console.error('Commande complète:', error.cmd);
+    console.error('Sortie standard:', error.stdout);
+    console.error('Erreur standard:', error.stderr);
     throw error;
   }
 }
@@ -102,8 +120,12 @@ async function waitForDatabase(maxAttempts = 30, delay = 1000) {
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
-        ssl: {
-          rejectUnauthorized: false
+        ssl: false,
+        sslMode: 'DISABLED',
+        authPlugins: {
+          mysql_native_password: () => () => {
+            return Buffer.from([0]);
+          }
         }
       });
       
