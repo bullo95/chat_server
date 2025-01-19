@@ -11,19 +11,21 @@ mkdir -p /usr/src/app/ssl
 # Register account
 ~/.acme.sh/acme.sh --register-account -m $EMAIL
 
-# Issue certificate using standalone mode with stronger parameters
+# Issue certificate using standalone mode
 ~/.acme.sh/acme.sh --issue \
   -d $DOMAIN \
   --standalone \
   --httpport $ACME_PORT \
   --server letsencrypt \
-  --keylength 4096 \
+  --keylength 2048 \
+  --cert-file /usr/src/app/ssl/cert.pem \
   --key-file /usr/src/app/ssl/privkey.pem \
   --fullchain-file /usr/src/app/ssl/fullchain.pem \
   --reloadcmd "touch /usr/src/app/ssl/reload"
 
 # Set proper permissions
 chmod 600 /usr/src/app/ssl/privkey.pem
+chmod 600 /usr/src/app/ssl/cert.pem
 chmod 600 /usr/src/app/ssl/fullchain.pem
 
 # Setup auto-renewal (acme.sh handles this automatically)

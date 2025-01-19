@@ -192,24 +192,27 @@ if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
     const credentials = {
       key: fs.readFileSync(keyPath, 'utf8'),
       cert: fs.readFileSync(certPath, 'utf8'),
-      minVersion: 'TLSv1.2',
-      ciphers: tls.getCiphers().join(':'),
+      ciphers: [
+        'ECDHE-ECDSA-AES128-GCM-SHA256',
+        'ECDHE-RSA-AES128-GCM-SHA256',
+        'ECDHE-ECDSA-AES256-GCM-SHA384',
+        'ECDHE-RSA-AES256-GCM-SHA384',
+        'ECDHE-ECDSA-CHACHA20-POLY1305',
+        'ECDHE-RSA-CHACHA20-POLY1305',
+        'DHE-RSA-AES128-GCM-SHA256',
+        'DHE-RSA-AES256-GCM-SHA384'
+      ].join(':'),
       honorCipherOrder: true,
-      secureOptions: [
-        'SSL_OP_NO_SSLv2',
-        'SSL_OP_NO_SSLv3',
-        'SSL_OP_NO_TLSv1',
-        'SSL_OP_NO_TLSv1_1'
-      ].reduce((memo, option) => memo | require('constants')[option], 0)
+      minVersion: 'TLSv1.2'
     };
-
-    // Log TLS configuration
-    console.log('TLS Configuration:');
-    console.log('- Min Version:', credentials.minVersion);
-    console.log('- Available Ciphers:', tls.getCiphers().length);
 
     server = https.createServer(credentials, app);
     console.log(' SSL certificates loaded successfully - Using HTTPS');
+    
+    // Log SSL configuration
+    console.log('SSL Configuration:');
+    console.log('- TLS Version:', credentials.minVersion);
+    console.log('- Ciphers:', credentials.ciphers);
   } catch (error) {
     console.error(' Error loading SSL certificates:', error);
     console.error('Stack trace:', error.stack);
