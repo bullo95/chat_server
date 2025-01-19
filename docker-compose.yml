@@ -3,27 +3,22 @@ version: '3.8'
 services:
   db:
     image: mysql:8.0
+    restart: always
     environment:
-      - MYSQL_ROOT_PASSWORD=tcukeb6-tcukeb6
-      - MYSQL_DATABASE=dating_app
-      - MYSQL_ROOT_HOST=%
-    ports:
-      - "3306:3306"
+      MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
+      MYSQL_DATABASE: dating_app
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    command: --default-authentication-plugin=mysql_native_password --require-secure-transport=OFF
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
+    restart: always
     ports:
       - "61860:61860"
     volumes:
@@ -39,8 +34,7 @@ services:
       - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-dummy_key}
       - EMAIL=${EMAIL:-test@example.com}
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
 volumes:
   mysql_data:
