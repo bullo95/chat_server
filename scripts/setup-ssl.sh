@@ -4,7 +4,7 @@ set -e
 # Configuration variables
 DOMAIN="bdomenech.freeboxos.fr"
 EMAIL="domenech.bruno@me.com"
-ACME_PORT="${ACME_PORT:-8080}"
+ACME_PORT="61860"  # Use the main application port
 SSL_DIR="/usr/src/app/ssl"
 ACME_HOME="/root/.acme.sh"
 
@@ -33,17 +33,20 @@ check_acme
 # Register account if needed
 "$ACME_HOME/acme.sh" --register-account -m "$EMAIL" || true
 
-# Issue certificate using standalone mode
+# Issue certificate using standalone mode with port 61860
+echo "Using port $ACME_PORT for ACME challenge..."
 "$ACME_HOME/acme.sh" --issue \
     -d "$DOMAIN" \
     --standalone \
     --httpport "$ACME_PORT" \
+    --listen-v4 \
     --server letsencrypt \
     --keylength 2048 \
     --cert-file "$SSL_DIR/cert.pem" \
     --key-file "$SSL_DIR/privkey.pem" \
     --fullchain-file "$SSL_DIR/fullchain.pem" \
     --reloadcmd "touch $SSL_DIR/reload" \
+    --debug 2 \
     --force
 
 # Set proper permissions
