@@ -1,12 +1,10 @@
-version: '3.7'
-
 services:
   db:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
-      MYSQL_DATABASE: dating_app
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_ROOT_HOST: '%'
     volumes:
       - mysql_data:/var/lib/mysql
@@ -18,7 +16,7 @@ services:
       --host-cache-size=0
       --mysqlx=0
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptcukeb6-tcukeb6"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -29,17 +27,17 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "8080:8080"
+      - "8080:80"
       - "443:443"
     environment:
       - PORT=443
       - DB_HOST=db
-      - DB_USER=root
-      - DB_PASSWORD=tcukeb6-tcukeb6
-      - DB_NAME=dating_app
+      - DB_USER=${MYSQL_USER}
+      - DB_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - DB_NAME=${MYSQL_DATABASE}
       - SERVER_IP=0.0.0.0
-      - NODE_ENV=development
-      - DOMAIN=backend.vigilys.fr
+      - NODE_ENV=production
+      - DOMAIN=${DOMAIN}
     volumes:
       - ./certificates:/etc/letsencrypt:ro
       - ./public/uploads:/usr/src/app/public/uploads
@@ -48,18 +46,19 @@ services:
       - db
     command: >
       sh -c "
-      while ! mysqladmin ping -h db -u root -ptcukeb6-tcukeb6 --silent; do
+      while ! mysqladmin ping -h db -u ${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} --silent; do
         echo 'Waiting for database...';
         sleep 3;
       done;
       node server.js;
       "
+
   nginx:
     image: nginx:latest
     volumes:
       - ./certbot/www:/var/www/certbot
     ports:
-      - "8081:8081"  # Le port 8081 est exposé pour le challenge ACME
+      - "8081:8081"
     command: >
       sh -c "echo '
       server {
@@ -79,12 +78,10 @@ services:
     environment:
       - DOMAIN=${DOMAIN}
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
-    entrypoint: sh -c "
-      if [ ! -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem ] || ! openssl x509 -checkend 86400 -noout -in /etc/letsencrypt/live/${DOMAIN}/fullchain.pem; then
+    entrypoint: >
+      sh -c "if [ ! -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem ] || ! openssl x509 -checkend 86400 -noout -in /etc/letsencrypt/live/${DOMAIN}/fullchain.pem; then
         certbot certonly --webroot -w /var/www/certbot --http-01-port 8081 --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN} -d www.${DOMAIN};
-      fi
-
-
+      fi"
 
 volumes:
   mysql_data:
