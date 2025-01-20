@@ -44,7 +44,7 @@ services:
     volumes:
       - app_uploads:/usr/src/app/public/uploads
       - ./ssl:/usr/src/app/ssl
-      - ~/.acme.sh:/root/.acme.sh
+      - acme_data:/root/.acme.sh
     depends_on:
       db:
         condition: service_healthy
@@ -52,3 +52,4 @@ services:
 volumes:
   mysql_data:
   app_uploads:
+  acme_data:
