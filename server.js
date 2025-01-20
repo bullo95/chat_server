@@ -472,9 +472,15 @@ async function setupDatabaseAndServer() {
 
 // Charger les certificats SSL
 const sslOptions = {
-  key: fs.readFileSync(path.resolve(__dirname, './certificates/privkey.pem')),
-  cert: fs.readFileSync(path.resolve(__dirname, './certificates/fullchain.pem')),
+  key: fs.readFileSync(`/etc/letsencrypt/live/${process.env.DOMAIN}/privkey.pem`),
+  cert: fs.readFileSync(`/etc/letsencrypt/live/${process.env.DOMAIN}/fullchain.pem`),
 };
+
+const httpsServer = https.createServer(sslOptions, app);
+
+httpsServer.listen(process.env.PORT || 443, () => {
+  console.log(`✅ HTTPS Server running on https://${process.env.DOMAIN}`);
+});
 
 // Démarrer le serveur HTTPS
 async function startServer() {
