@@ -7,7 +7,6 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 const YAML = require('yamljs');
 const fs = require('fs');
-const https = require('https');
 
 // Debug logging
 console.log('Starting server initialization...');
@@ -108,7 +107,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `https://${process.env.SERVER_IP}:${process.env.PORT}`,
+        url: `http://${process.env.SERVER_IP}:${process.env.PORT}`,
         description: 'Development server',
       },
     ],
@@ -148,8 +147,8 @@ app.use((req, res, next) => {
 const corsOptions = {
   origin: function(origin, callback) {
     const allowedOrigins = [
-      `https://${process.env.DOMAIN}`,
-      `https://${process.env.DOMAIN}:61860`,
+      `http://${process.env.DOMAIN}`,
+      `http://${process.env.DOMAIN}:61860`,
       'http://localhost:3000',
       'http://localhost:61860'
     ];
@@ -189,33 +188,6 @@ app.get('/.well-known/acme-challenge/:token', (req, res) => {
     res.status(500).send('Internal server error');
   }
 });
-
-async function setupHttpsServer() {
-  console.log('Setting up HTTPS server...');
-  
-  const sslDir = path.join(__dirname, 'ssl');
-  const certPath = path.join(sslDir, 'fullchain.pem');
-  const keyPath = path.join(sslDir, 'privkey.pem');
-
-  try {
-    const credentials = {
-      key: fs.readFileSync(keyPath),
-      cert: fs.readFileSync(certPath),
-      minVersion: 'TLSv1.2'
-    };
-
-    const server = https.createServer(credentials, app);
-    
-    server.listen(process.env.PORT, process.env.SERVER_IP, () => {
-      console.log(`✅ HTTPS Server running on ${process.env.SERVER_IP}:${process.env.PORT}`);
-    });
-
-    return server;
-  } catch (error) {
-    console.error('❌ Failed to start HTTPS server:', error.message);
-    process.exit(1);
-  }
-}
 
 // Add test endpoint
 app.get('/test', (req, res) => {
@@ -501,11 +473,9 @@ async function start() {
     await setupDatabaseAndServer();
     console.log('✅ Database setup completed');
 
-    const server = await setupHttpsServer();
-    if (!server) {
-      console.error('❌ Failed to setup HTTPS server');
-      process.exit(1);
-    }
+    const server = app.listen(process.env.PORT, process.env.SERVER_IP, () => {
+      console.log(`✅ HTTP Server running on ${process.env.SERVER_IP}:${process.env.PORT}`);
+    });
 
     io.listen(server);
 
@@ -516,16 +486,16 @@ async function start() {
     console.log('\nServer Configuration:');
     console.log(`- Domain: ${domain}`);
     console.log(`- Port: ${port}`);
-    console.log('- Protocol: HTTPS');
+    console.log('- Protocol: HTTP');
     console.log('\nAPI Documentation:');
-    console.log(`https://${domain}:${port}/api-docs`);
+    console.log(`http://${domain}:${port}/api-docs`);
 
     // Start the server
     await new Promise((resolve, reject) => {
       server.listen(port, '0.0.0.0')
         .once('error', reject)
         .once('listening', () => {
-          console.log(`\n✅ HTTPS Server started successfully`);
+          console.log(`\n✅ HTTP Server started successfully`);
           resolve();
         });
     });
