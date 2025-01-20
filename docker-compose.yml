@@ -56,14 +56,14 @@ services:
   nginx:
     image: nginx:latest
     volumes:
-      - ./certbot/www:/var/www/certbot
+      - certbot-webroot:/var/www/certbot
     ports:
       - "8081:8081"
     command: >
       sh -c "echo '
       server {
         listen 8081;
-        server_name ${DOMAIN};
+        server_name ${DOMAIN} www.${DOMAIN};
         location /.well-known/acme-challenge/ {
           root /var/www/certbot;
         }
@@ -73,8 +73,8 @@ services:
   certbot:
     image: certbot/certbot
     volumes:
+      - certbot-webroot:/var/www/certbot
       - ./certificates:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
     environment:
       - DOMAIN=${DOMAIN}
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
@@ -86,3 +86,4 @@ services:
 volumes:
   mysql_data:
   app_uploads:
+  certbot-webroot:
