@@ -29,7 +29,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "80:80"
+      - "8080:8080"
       - "443:443"
     environment:
       - PORT=443
