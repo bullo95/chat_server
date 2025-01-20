@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:18
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y \
     socat \
     mariadb-client \
     cron \
+    certbot \
+    python3-certbot \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -22,25 +24,16 @@ RUN npm install
 COPY . .
 
 # Create required directories
-RUN mkdir -p /usr/src/app/ssl \
+RUN mkdir -p /var/www/html/.well-known/acme-challenge \
+    /etc/letsencrypt \
     /usr/src/app/public/uploads \
-    /usr/src/app/database_dumps \
-    /usr/src/app/.well-known/acme-challenge
+    /usr/src/app/database_dumps
 
 # Make scripts executable
-RUN chmod +x scripts/*.sh
-
-# Install acme.sh
-RUN cd /tmp && \
-    curl -O https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh && \
-    chmod +x acme.sh && \
-    ./acme.sh --install --home /root/.acme.sh --config-home /root/.acme.sh/data \
-    --cert-home /usr/src/app/ssl --accountemail "domenech.bruno@me.com" \
-    --no-cron && \
-    rm -rf /tmp/*
+RUN chmod +x ./scripts/*.sh
 
 # Expose ports
-EXPOSE 61860
+EXPOSE 61860 80 443
 
 # Start the application
 CMD ["./scripts/init-certs.sh"]

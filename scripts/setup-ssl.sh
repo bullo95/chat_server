@@ -2,57 +2,44 @@
 set -e
 
 # Configuration variables
-DOMAIN="t2m.vigilys.fr"
-EMAIL="domenech.bruno@me.com"
-ACME_PORT="${ACME_PORT:-80}"
+DOMAIN="${DOMAIN:-t2m.vigilys.fr}"
+EMAIL="${EMAIL:-domenech.bruno@me.com}"
 SSL_DIR="/usr/src/app/ssl"
-ACME_HOME="/root/.acme.sh"
 
-# Function to check if acme.sh is installed
-check_acme() {
-    if [ ! -f "$ACME_HOME/acme.sh" ]; then
-        echo "Installing acme.sh..."
-        cd /tmp
-        curl -O https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh
-        chmod +x acme.sh
-        ./acme.sh --install --home "$ACME_HOME" --config-home "$ACME_HOME/data" \
-            --cert-home "$SSL_DIR" --accountemail "$EMAIL" --no-cron
-        rm -f /tmp/acme.sh
-    fi
-}
-
-# Create directories
+# Create SSL directory if it doesn't exist
 mkdir -p "$SSL_DIR"
-mkdir -p "$ACME_HOME"
-mkdir -p /usr/src/app/.well-known/acme-challenge
 
 echo "Setting up Let's Encrypt certificates..."
 
-# Ensure acme.sh is installed
-check_acme
+# Stop any process that might be using port 80
+if lsof -Pi :80 -sTCP:LISTEN -t >/dev/null ; then
+    echo "Stopping processes using port 80..."
+    lsof -Pi :80 -sTCP:LISTEN -t | xargs kill
+fi
 
-# Register account if needed
-"$ACME_HOME/acme.sh" --register-account -m "$EMAIL" || true
+# Request the certificate
+certbot certonly --standalone \
+    --non-interactive \
+    --agree-tos \
+    --email "$EMAIL" \
+    --domain "$DOMAIN" \
+    --http-01-port 80
 
-# Issue certificate using HTTP challenge
-echo "Using port $ACME_PORT for ACME challenge..."
-"$ACME_HOME/acme.sh" --issue \
-    -d "$DOMAIN" \
-    --standalone \
-    --httpport "$ACME_PORT" \
-    --server letsencrypt \
-    --keylength 2048 \
-    --cert-file "$SSL_DIR/cert.pem" \
-    --key-file "$SSL_DIR/privkey.pem" \
-    --fullchain-file "$SSL_DIR/fullchain.pem" \
-    --reloadcmd "touch $SSL_DIR/reload" \
-    --debug 2 \
-    --force
+# Copy certificates to our SSL directory
+echo "Copying certificates to $SSL_DIR..."
+cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" "$SSL_DIR/privkey.pem"
+cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$SSL_DIR/fullchain.pem"
+cp "/etc/letsencrypt/live/$DOMAIN/cert.pem" "$SSL_DIR/cert.pem"
 
 # Set proper permissions
 chmod 600 "$SSL_DIR/privkey.pem"
 chmod 600 "$SSL_DIR/cert.pem"
 chmod 600 "$SSL_DIR/fullchain.pem"
+
+# Setup auto-renewal
+echo "0 0 * * * root certbot renew --quiet --standalone --http-01-port 80" > /etc/cron.d/certbot-renew
+chmod 0644 /etc/cron.d/certbot-renew
+service cron start
 
 # Display certificate information
 echo -e "\nCertificate information:"
@@ -63,3 +50,7 @@ echo -e "\nCertificate fingerprint:"
 openssl x509 -in "$SSL_DIR/fullchain.pem" -noout -fingerprint
 
 echo -e "\nSSL certificates generated successfully!"
+echo "Auto-renewal has been configured to run daily."
+
+# Start the Node.js application
+exec node server.js
