@@ -7,7 +7,8 @@ set -x
 # Configuration variables
 DOMAIN="${DOMAIN:-backend.vigilys.fr}"
 EMAIL="${EMAIL:-domenech.bruno@me.com}"
-SSL_DIR="/etc/letsencrypt/live/$DOMAIN"
+CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+KEY_PATH="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
 
 echo "Setting up Let's Encrypt certificates (using staging environment)..."
 echo "Domain: $DOMAIN"
@@ -38,9 +39,11 @@ if lsof -i:80 > /dev/null 2>&1; then
     sleep 2
 fi
 
-# Start nginx with a fresh configuration
-echo "Starting nginx..."
-nginx
+# Use initial nginx configuration for certificate acquisition
+echo "Starting nginx with initial configuration..."
+mv /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.bak
+cp /etc/nginx/conf.d/initial.conf /etc/nginx/conf.d/default.conf
+nginx -t && nginx
 
 # Request the certificate using nginx plugin with staging environment
 echo "Requesting certificate for $DOMAIN..."
@@ -67,22 +70,32 @@ if ! certbot --nginx \
 fi
 
 # Verify certificates exist
-if [ -f "$SSL_DIR/fullchain.pem" ] && [ -f "$SSL_DIR/privkey.pem" ]; then
-    echo "Certificates generated successfully at $SSL_DIR"
+if [ -f "$CERT_PATH" ] && [ -f "$KEY_PATH" ]; then
+    echo "Certificates generated successfully!"
     
     # Set proper permissions
-    chmod 644 "$SSL_DIR/fullchain.pem"
-    chmod 644 "$SSL_DIR/privkey.pem"
+    chmod 644 "$CERT_PATH"
+    chmod 644 "$KEY_PATH"
     
-    echo "SSL setup completed successfully! (Note: Using staging certificates)"
-    echo "WARNING: These are staging certificates and will show as untrusted in browsers."
-    echo "When ready for production, remove the --staging flag and wait until after $(date -d '2025-01-21 20:55:42 UTC')"
+    # Restore full nginx configuration
+    echo "Restoring full nginx configuration..."
+    mv /etc/nginx/conf.d/default.conf.bak /etc/nginx/conf.d/default.conf
     
-    # Reload nginx to apply the new configuration
-    echo "Reloading nginx with new configuration..."
-    nginx -t && nginx -s reload
+    # Test nginx configuration before starting
+    if nginx -t; then
+        echo "Nginx configuration test passed. Starting nginx..."
+        nginx -s reload || nginx
+        echo "SSL setup completed successfully! (Note: Using staging certificates)"
+        echo "WARNING: These are staging certificates and will show as untrusted in browsers."
+        echo "When ready for production, remove the --staging flag and wait until after $(date -d '2025-01-21 20:55:42 UTC')"
+    else
+        echo "Nginx configuration test failed. Check the certificates and configuration."
+        exit 1
+    fi
 else
-    echo "Failed to generate certificates. Check logs above for details."
+    echo "Failed to generate certificates. Files not found at expected locations:"
+    echo "Certificate: $CERT_PATH"
+    echo "Key: $KEY_PATH"
     exit 1
 fi
 
