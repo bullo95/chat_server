@@ -3,9 +3,8 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      - MYSQL_ROOT_PASSWORD=tcukeb6-tcukeb6
-      - MYSQL_DATABASE=dating_app
-      - MYSQL_ROOT_HOST=%
+      MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
+      MYSQL_DATABASE: dating_app
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -13,10 +12,10 @@ services:
       - "3306:3306"
     command: --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-ptcukeb6-tcukeb6"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "mysql", "-u", "root", "-ptcukeb6-tcukeb6", "-e", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   app:
     build:
@@ -26,6 +25,7 @@ services:
     ports:
       - "61860:61860"
       - "80:80"  # For ACME challenge
+      - "443:443"  # For HTTPS
     environment:
       - PORT=61860
       - DB_HOST=db
@@ -45,8 +45,7 @@ services:
       - ./ssl:/usr/src/app/ssl
       - acme_data:/root/.acme.sh
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
 volumes:
   mysql_data:

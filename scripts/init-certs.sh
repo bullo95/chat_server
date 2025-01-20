@@ -2,13 +2,22 @@
 set -e
 
 # Wait for MySQL to be ready
-wait_for_mysql() {
-    echo "Waiting for MySQL to be ready..."
-    while ! mysqladmin ping -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" --silent; do
-        sleep 1
-    done
-    echo "MySQL is ready!"
-}
+echo "Waiting for MySQL to be ready..."
+while ! mysql -h db -u root -ptcukeb6-tcukeb6 -e "SELECT 1" >/dev/null 2>&1; do
+  sleep 1
+done
+
+echo "MySQL is ready"
+
+# Initialize database if needed
+if ! mysql -h db -u root -ptcukeb6-tcukeb6 dating_app -e "SELECT 1 FROM users LIMIT 1" >/dev/null 2>&1; then
+  echo "Initializing database..."
+  mysql -h db -u root -ptcukeb6-tcukeb6 < /usr/src/app/database.sql
+fi
+
+# Create necessary directories
+mkdir -p /usr/src/app/ssl
+mkdir -p /usr/src/app/public/uploads
 
 # Function to check if SSL certificates exist and are valid
 check_ssl() {
@@ -27,23 +36,8 @@ check_ssl() {
     return 0
 }
 
-# Main execution
-echo "Starting initialization..."
-
-# Create necessary directories
-mkdir -p /usr/src/app/ssl
-mkdir -p /usr/src/app/public/uploads
-
-# Wait for MySQL
-wait_for_mysql
-
 # Setup SSL certificates
-if ! check_ssl; then
-    echo "SSL certificates need to be generated..."
-    ./scripts/setup-ssl.sh
-else
-    echo "Using existing SSL certificates"
-fi
+./scripts/setup-ssl.sh
 
 # Start the Node.js application
 echo "Starting Node.js application..."
