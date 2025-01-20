@@ -6,46 +6,35 @@ DOMAIN="bdomenech.freeboxos.fr"
 EMAIL="domenech.bruno@me.com"
 ACME_PORT="${ACME_PORT:-8080}"
 SSL_DIR="/usr/src/app/ssl"
+ACME_HOME="/root/.acme.sh"
 
-# Create directory for certificates
+# Function to check if acme.sh is installed
+check_acme() {
+    if [ ! -f "$ACME_HOME/acme.sh" ]; then
+        echo "Installing acme.sh..."
+        cd /tmp
+        curl -O https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh
+        chmod +x acme.sh
+        ./acme.sh --install --home "$ACME_HOME" --config-home "$ACME_HOME/data" \
+            --cert-home "$SSL_DIR" --accountemail "$EMAIL" --no-cron
+        rm -f /tmp/acme.sh
+    fi
+}
+
+# Create directories
 mkdir -p "$SSL_DIR"
+mkdir -p "$ACME_HOME"
 
-# Generate self-signed certificate if not in production
-if [[ "$NODE_ENV" != "production" ]]; then
-    echo "Generating self-signed certificates for development..."
-    
-    # Generate certificates with more detailed subject
-    openssl req -x509 -newkey rsa:2048 -nodes \
-        -keyout "$SSL_DIR/privkey.pem" \
-        -out "$SSL_DIR/fullchain.pem" \
-        -days 365 \
-        -subj "/CN=$DOMAIN" \
-        -addext "subjectAltName=DNS:$DOMAIN"
-    
-    # Set proper permissions
-    chmod 600 "$SSL_DIR/privkey.pem"
-    chmod 600 "$SSL_DIR/fullchain.pem"
-    
-    # Display certificate information
-    echo -e "\nCertificate information:"
-    echo "------------------------"
-    openssl x509 -in "$SSL_DIR/fullchain.pem" -text -noout | grep -A1 "Subject:" 
-    openssl x509 -in "$SSL_DIR/fullchain.pem" -text -noout | grep -A1 "Validity"
-    echo -e "\nCertificate fingerprint:"
-    openssl x509 -in "$SSL_DIR/fullchain.pem" -noout -fingerprint
-    
-    echo -e "\nSelf-signed certificates generated successfully"
-    exit 0
-fi
-
-# Production environment - use Let's Encrypt
 echo "Setting up Let's Encrypt certificates..."
 
+# Ensure acme.sh is installed
+check_acme
+
 # Register account if needed
-~/.acme.sh/acme.sh --register-account -m "$EMAIL" || true
+"$ACME_HOME/acme.sh" --register-account -m "$EMAIL" || true
 
 # Issue certificate using standalone mode
-~/.acme.sh/acme.sh --issue \
+"$ACME_HOME/acme.sh" --issue \
     -d "$DOMAIN" \
     --standalone \
     --httpport "$ACME_PORT" \

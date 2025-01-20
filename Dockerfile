@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     openssl \
     socat \
     mariadb-client \
+    cron \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -29,10 +30,16 @@ RUN mkdir -p /usr/src/app/ssl \
 RUN chmod +x scripts/*.sh
 
 # Install acme.sh
-RUN curl https://get.acme.sh | sh -s email=domenech.bruno@me.com
+RUN cd /tmp && \
+    curl -O https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh && \
+    chmod +x acme.sh && \
+    ./acme.sh --install --home /root/.acme.sh --config-home /root/.acme.sh/data \
+    --cert-home /usr/src/app/ssl --accountemail "domenech.bruno@me.com" \
+    --no-cron && \
+    rm -rf /tmp/*
 
 # Expose ports
-EXPOSE 61860 8080
+EXPOSE 61860 8080 443
 
 # Start the application
 CMD ["./scripts/init-certs.sh"]
