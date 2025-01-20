@@ -15,6 +15,10 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /usr/src/app
 
+# Create SSL directory
+RUN mkdir -p /usr/src/app/ssl && \
+    chown -R node:node /usr/src/app/ssl
+
 # Copy package files
 COPY package*.json ./
 
@@ -34,10 +38,9 @@ RUN mkdir -p /var/www/html/.well-known/acme-challenge \
     /etc/letsencrypt \
     /usr/src/app/public/uploads \
     /usr/src/app/database_dumps \
-    /usr/src/app/ssl \
+    /var/log/nginx \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
-    && mkdir -p /var/log/nginx \
     && touch /var/log/nginx/error.log \
     && touch /var/log/nginx/access.log \
     && chown -R www-data:www-data /var/log/nginx
