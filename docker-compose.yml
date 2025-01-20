@@ -11,7 +11,10 @@ services:
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "3306:3306"
-    command: --default-authentication-plugin=caching_sha2_password --initialize-insecure
+    command: >
+      --authentication-policy=caching_sha2_password
+      --host-cache-size=0
+      --mysqlx=0
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptcukeb6-tcukeb6"]
       interval: 5s
