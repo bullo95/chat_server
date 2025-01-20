@@ -170,64 +170,24 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-async function waitForSSLCertificates() {
-  const maxAttempts = 30;
-  const sslDir = path.join(__dirname, 'ssl');
-  const requiredFiles = ['fullchain.pem', 'privkey.pem'];
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    console.log(`Checking for certificates (attempt ${attempt}/${maxAttempts})...`);
-    
-    try {
-      // Check if all required files exist and are readable
-      const filesExist = requiredFiles.every(file => {
-        const filePath = path.join(sslDir, file);
-        try {
-          fs.accessSync(filePath, fs.constants.R_OK);
-          return true;
-        } catch (err) {
-          return false;
-        }
-      });
-
-      if (filesExist) {
-        console.log('✅ SSL certificates found and readable');
-        return true;
-      }
-    } catch (err) {
-      console.error('Error checking certificates:', err.message);
-    }
-
-    // Wait 2 seconds before next attempt
-    await new Promise(resolve => setTimeout(resolve, 2000));
-  }
-
-  throw new Error('Failed to find SSL certificates after maximum attempts');
-}
-
 async function setupHttpsServer() {
-  console.log('Starting server initialization...');
+  console.log('Setting up HTTPS server...');
   
-  try {
-    // Wait for SSL certificates
-    console.log('Waiting for SSL certificates...');
-    await waitForSSLCertificates();
+  const sslDir = path.join(__dirname, 'ssl');
+  const certPath = path.join(sslDir, 'fullchain.pem');
+  const keyPath = path.join(sslDir, 'privkey.pem');
 
-    // Read SSL certificates
-    const sslDir = path.join(__dirname, 'ssl');
+  try {
     const credentials = {
-      key: fs.readFileSync(path.join(sslDir, 'privkey.pem')),
-      cert: fs.readFileSync(path.join(sslDir, 'fullchain.pem'))
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath),
+      minVersion: 'TLSv1.2'
     };
 
-    // Create HTTPS server
     const server = https.createServer(credentials, app);
     
-    // Start listening
-    const port = process.env.PORT || 61860;
-    const domain = process.env.DOMAIN || process.env.SERVER_IP;
-    server.listen(port, domain, () => {
-      console.log(`✅ HTTPS Server running on ${domain}:${port}`);
+    server.listen(process.env.PORT, process.env.SERVER_IP, () => {
+      console.log(`✅ HTTPS Server running on ${process.env.SERVER_IP}:${process.env.PORT}`);
     });
 
     return server;
@@ -235,61 +195,6 @@ async function setupHttpsServer() {
     console.error('❌ Failed to start HTTPS server:', error.message);
     process.exit(1);
   }
-}
-
-// Function to setup HTTPS server with SSL certificates
-async function setupHttpsServer(certPath, keyPath, maxAttempts = 30) {
-  console.log('\nWaiting for SSL certificates...');
-  
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    console.log(`Checking for certificates (attempt ${attempt}/${maxAttempts})...`);
-    
-    if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
-      try {
-        // Check if files are readable and non-empty
-        const cert = fs.readFileSync(certPath, 'utf8');
-        const key = fs.readFileSync(keyPath, 'utf8');
-        
-        if (cert.length > 0 && key.length > 0) {
-          console.log('✅ SSL certificates found and valid');
-          
-          const credentials = {
-            key: key,
-            cert: cert,
-            ciphers: [
-              'ECDHE-ECDSA-AES128-GCM-SHA256',
-              'ECDHE-RSA-AES128-GCM-SHA256',
-              'ECDHE-ECDSA-AES256-GCM-SHA384',
-              'ECDHE-RSA-AES256-GCM-SHA384',
-              'ECDHE-ECDSA-CHACHA20-POLY1305',
-              'ECDHE-RSA-CHACHA20-POLY1305',
-              'DHE-RSA-AES128-GCM-SHA256',
-              'DHE-RSA-AES256-GCM-SHA384'
-            ].join(':'),
-            honorCipherOrder: true,
-            minVersion: 'TLSv1.2'
-          };
-
-          const server = https.createServer(credentials, app);
-          console.log('✅ HTTPS server created successfully');
-          
-          // Log SSL configuration
-          console.log('SSL Configuration:');
-          console.log('- TLS Version:', credentials.minVersion);
-          console.log('- Ciphers configured');
-          
-          return server;
-        }
-      } catch (error) {
-        console.log('Certificate files exist but are not ready yet...');
-      }
-    }
-    
-    // Wait 5 seconds before next attempt
-    await new Promise(resolve => setTimeout(resolve, 5000));
-  }
-  
-  return null;
 }
 
 // Add test endpoint
