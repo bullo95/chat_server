@@ -24,7 +24,7 @@ services:
     restart: always
     ports:
       - "61860:61860"
-      - "80:80"  # For ACME challenge
+      - "8080:80"  # Utilisez 8080 sur l'hôte au lieu de 80
       - "443:443"  # For HTTPS
     environment:
       - PORT=61860
