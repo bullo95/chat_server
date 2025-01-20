@@ -5,18 +5,25 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
       MYSQL_DATABASE: dating_app
+      MYSQL_USER: root
+      MYSQL_PASSWORD: tcukeb6-tcukeb6
+      MYSQL_ROOT_HOST: '%'
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --skip-name-resolve
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
-      interval: 10s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptcukeb6-tcukeb6"]
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 30s
 
   app:
     build:
