@@ -59,7 +59,6 @@ services:
       - certbot-webroot:/var/www/certbot
     ports:
       - "8081:8081"  # Le port interne pour les challenges
-      - "8080:8080"  # Port pour la redirection HTTP
     command: >
       sh -c "echo '
       server {
