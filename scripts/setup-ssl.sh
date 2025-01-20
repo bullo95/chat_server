@@ -13,10 +13,10 @@ mkdir -p "$WEBROOT/.well-known/acme-challenge"
 
 echo "Setting up Let's Encrypt certificates..."
 
-# Stop any process that might be using port 80
-if lsof -Pi :80 -sTCP:LISTEN -t >/dev/null ; then
-    echo "Stopping processes using port 80..."
-    lsof -Pi :80 -sTCP:LISTEN -t | xargs kill
+# Stop any process that might be using port 8080
+if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null ; then
+    echo "Stopping processes using port 8080..."
+    lsof -Pi :8080 -sTCP:LISTEN -t | xargs kill
 fi
 
 # Request the certificate using webroot method
@@ -26,7 +26,8 @@ certbot certonly \
     --non-interactive \
     --agree-tos \
     --email "$EMAIL" \
-    --domain "$DOMAIN"
+    --domain "$DOMAIN" \
+    --http-01-port 8080
 
 # Copy certificates to our SSL directory
 echo "Copying certificates to $SSL_DIR..."
@@ -40,7 +41,7 @@ chmod 600 "$SSL_DIR/cert.pem"
 chmod 600 "$SSL_DIR/fullchain.pem"
 
 # Setup auto-renewal with webroot
-echo "0 0 * * * root certbot renew --quiet --webroot --webroot-path $WEBROOT" > /etc/cron.d/certbot-renew
+echo "0 0 * * * root certbot renew --quiet --webroot --webroot-path $WEBROOT --http-01-port 8080" > /etc/cron.d/certbot-renew
 chmod 0644 /etc/cron.d/certbot-renew
 service cron start
 
