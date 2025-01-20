@@ -7,7 +7,7 @@ set -x
 # Configuration variables
 DOMAIN="${DOMAIN:-backend.vigilys.fr}"
 EMAIL="${EMAIL:-domenech.bruno@me.com}"
-SSL_DIR="/usr/src/app/ssl"
+SSL_DIR="/etc/letsencrypt/live/$DOMAIN"
 
 echo "Setting up Let's Encrypt certificates (using staging environment)..."
 echo "Domain: $DOMAIN"
@@ -66,26 +66,25 @@ if ! certbot --nginx \
     exit 1
 fi
 
-# Copy certificates to our SSL directory if they were generated
-if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
-    echo "Certificates generated successfully. Copying to SSL directory..."
-    mkdir -p "$SSL_DIR"
-    cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$SSL_DIR/"
-    cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" "$SSL_DIR/"
-    chown -R www-data:www-data "$SSL_DIR"
+# Verify certificates exist
+if [ -f "$SSL_DIR/fullchain.pem" ] && [ -f "$SSL_DIR/privkey.pem" ]; then
+    echo "Certificates generated successfully at $SSL_DIR"
+    
+    # Set proper permissions
     chmod 644 "$SSL_DIR/fullchain.pem"
     chmod 644 "$SSL_DIR/privkey.pem"
+    
     echo "SSL setup completed successfully! (Note: Using staging certificates)"
     echo "WARNING: These are staging certificates and will show as untrusted in browsers."
     echo "When ready for production, remove the --staging flag and wait until after $(date -d '2025-01-21 20:55:42 UTC')"
+    
+    # Reload nginx to apply the new configuration
+    echo "Reloading nginx with new configuration..."
+    nginx -t && nginx -s reload
 else
     echo "Failed to generate certificates. Check logs above for details."
     exit 1
 fi
-
-# Restart nginx to apply the new configuration
-echo "Restarting nginx with new configuration..."
-nginx -s reload || nginx
 
 # Disable debug mode
 set +x
