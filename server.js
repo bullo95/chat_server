@@ -170,6 +170,73 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+async function waitForSSLCertificates() {
+  const maxAttempts = 30;
+  const sslDir = path.join(__dirname, 'ssl');
+  const requiredFiles = ['fullchain.pem', 'privkey.pem'];
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    console.log(`Checking for certificates (attempt ${attempt}/${maxAttempts})...`);
+    
+    try {
+      // Check if all required files exist and are readable
+      const filesExist = requiredFiles.every(file => {
+        const filePath = path.join(sslDir, file);
+        try {
+          fs.accessSync(filePath, fs.constants.R_OK);
+          return true;
+        } catch (err) {
+          return false;
+        }
+      });
+
+      if (filesExist) {
+        console.log('✅ SSL certificates found and readable');
+        return true;
+      }
+    } catch (err) {
+      console.error('Error checking certificates:', err.message);
+    }
+
+    // Wait 2 seconds before next attempt
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+
+  throw new Error('Failed to find SSL certificates after maximum attempts');
+}
+
+async function setupHttpsServer() {
+  console.log('Starting server initialization...');
+  
+  try {
+    // Wait for SSL certificates
+    console.log('Waiting for SSL certificates...');
+    await waitForSSLCertificates();
+
+    // Read SSL certificates
+    const sslDir = path.join(__dirname, 'ssl');
+    const credentials = {
+      key: fs.readFileSync(path.join(sslDir, 'privkey.pem')),
+      cert: fs.readFileSync(path.join(sslDir, 'fullchain.pem'))
+    };
+
+    // Create HTTPS server
+    const server = https.createServer(credentials, app);
+    
+    // Start listening
+    const port = process.env.PORT || 61860;
+    const domain = process.env.DOMAIN || process.env.SERVER_IP;
+    server.listen(port, domain, () => {
+      console.log(`✅ HTTPS Server running on ${domain}:${port}`);
+    });
+
+    return server;
+  } catch (error) {
+    console.error('❌ Failed to start HTTPS server:', error.message);
+    process.exit(1);
+  }
+}
+
 // Function to setup HTTPS server with SSL certificates
 async function setupHttpsServer(certPath, keyPath, maxAttempts = 30) {
   console.log('\nWaiting for SSL certificates...');
@@ -509,12 +576,7 @@ async function start() {
     await setupDatabaseAndServer();
     console.log('✅ Database setup completed');
 
-    const sslPath = path.join(__dirname, 'ssl');
-    const certPath = path.join(sslPath, 'fullchain.pem');
-    const keyPath = path.join(sslPath, 'privkey.pem');
-
-    // Setup HTTPS server
-    const server = await setupHttpsServer(certPath, keyPath);
+    const server = await setupHttpsServer();
     if (!server) {
       console.error('❌ Failed to setup HTTPS server');
       process.exit(1);
