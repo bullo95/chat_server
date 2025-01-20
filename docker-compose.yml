@@ -12,10 +12,11 @@ services:
       - "3306:3306"
     command: --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 40s
 
   app:
     build:
@@ -24,7 +25,8 @@ services:
     restart: always
     ports:
       - "61860:61860/tcp"
-      - "8080:8080/tcp"
+      - "8080:8080/tcp"  # For ACME challenge
+      - "443:443/tcp"  # For HTTPS
     environment:
       - PORT=61860
       - DB_HOST=db
@@ -38,9 +40,11 @@ services:
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
       - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-dummy_key}
       - EMAIL=domenech.bruno@me.com
+      - NODE_ENV=production
     volumes:
       - app_uploads:/usr/src/app/public/uploads
       - ./ssl:/usr/src/app/ssl
+      - ~/.acme.sh:/root/.acme.sh
     depends_on:
       db:
         condition: service_healthy
