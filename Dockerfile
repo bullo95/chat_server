@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     certbot \
     python3-certbot \
     nginx \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -23,6 +24,14 @@ RUN npm install
 
 # Copy application files
 COPY . .
+
+# Clone and build frontend
+RUN git clone https://github.com/bullo95/chat_frontend.git /usr/src/frontend
+WORKDIR /usr/src/frontend
+RUN npm install
+ENV REACT_APP_API_URL=https://t2m.vigilys.fr/api
+RUN npm run build
+WORKDIR /usr/src/app
 
 # Remove default Nginx configuration and copy our configuration
 RUN rm -f /etc/nginx/sites-enabled/default \
@@ -41,6 +50,9 @@ RUN mkdir -p /var/www/html/.well-known/acme-challenge \
     && touch /var/log/nginx/error.log \
     && touch /var/log/nginx/access.log \
     && chown -R www-data:www-data /var/log/nginx
+
+# Copy frontend build to nginx serve directory
+RUN cp -r /usr/src/frontend/dist/* /var/www/html/
 
 # Make scripts executable
 RUN chmod +x ./scripts/*.sh
