@@ -8,10 +8,12 @@ RUN apt-get update && apt-get install -y \
     mariadb-client \
     cron \
     python3-pip \
+    python3-venv \
     nginx \
     lsof \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --no-cache-dir certbot
+    && python3 -m pip install --upgrade pip \
+    && python3 -m pip install --no-cache-dir certbot
 
 # Set working directory
 WORKDIR /usr/src/app
