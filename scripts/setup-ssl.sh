@@ -5,12 +5,9 @@ set -e
 DOMAIN="${DOMAIN:-t2m.vigilys.fr}"
 EMAIL="${EMAIL:-domenech.bruno@me.com}"
 SSL_DIR="/usr/src/app/ssl"
-WEBROOT="/var/www/html"
 
-# Create required directories
+# Create SSL directory if it doesn't exist
 mkdir -p "$SSL_DIR"
-mkdir -p "$WEBROOT/.well-known/acme-challenge"
-chmod -R 755 "$WEBROOT"
 
 echo "Setting up Let's Encrypt certificates..."
 
@@ -20,16 +17,18 @@ if pgrep nginx > /dev/null; then
     service nginx stop
 fi
 
-# Request the certificate using webroot method
+# Wait a moment for the port to be fully released
+sleep 2
+
+# Request the certificate using standalone mode
 echo "Requesting certificate for $DOMAIN..."
 certbot certonly \
-    --webroot \
-    --webroot-path "$WEBROOT" \
+    --standalone \
     --non-interactive \
     --agree-tos \
     --email "$EMAIL" \
     --domain "$DOMAIN" \
-    --preferred-challenges http-01 \
+    --preferred-challenges http \
     -v
 
 # Check if certificates were generated successfully
@@ -47,6 +46,7 @@ if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
     echo "SSL setup completed successfully!"
 else
     echo "Failed to generate certificates. Check /var/log/letsencrypt/letsencrypt.log for details."
+    cat /var/log/letsencrypt/letsencrypt.log
     exit 1
 fi
 
