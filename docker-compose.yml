@@ -58,7 +58,7 @@ services:
     volumes:
       - certbot-webroot:/var/www/certbot
     ports:
-      - "8081:8081"
+      - "80:8081"
     command: >
       sh -c "echo '
       server {
