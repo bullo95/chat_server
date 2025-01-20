@@ -58,12 +58,13 @@ services:
     volumes:
       - certbot-webroot:/var/www/certbot
     ports:
-      - "80:8081"
+      - "8081:8081"  # Le port interne pour les challenges
+      - "8080:8080"  # Port pour la redirection HTTP
     command: >
       sh -c "echo '
       server {
         listen 8081;
-        server_name ${DOMAIN} www.${DOMAIN};
+        server_name ${DOMAIN};
         location /.well-known/acme-challenge/ {
           root /var/www/certbot;
         }
@@ -80,7 +81,7 @@ services:
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
     entrypoint: >
       sh -c "if [ ! -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem ] || ! openssl x509 -checkend 86400 -noout -in /etc/letsencrypt/live/${DOMAIN}/fullchain.pem; then
-        certbot certonly --webroot -w /var/www/certbot --http-01-port 8081 --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN} -d www.${DOMAIN};
+        certbot certonly --webroot -w /var/www/certbot --http-01-port 8081 --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN};
       fi"
 
 volumes:
