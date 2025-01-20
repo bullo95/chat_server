@@ -5,9 +5,11 @@ set -e
 DOMAIN="${DOMAIN:-t2m.vigilys.fr}"
 EMAIL="${EMAIL:-domenech.bruno@me.com}"
 SSL_DIR="/usr/src/app/ssl"
+WEBROOT="/var/www/html"
 
 # Create SSL directory if it doesn't exist
 mkdir -p "$SSL_DIR"
+mkdir -p "$WEBROOT/.well-known/acme-challenge"
 
 echo "Setting up Let's Encrypt certificates..."
 
@@ -17,13 +19,14 @@ if lsof -Pi :80 -sTCP:LISTEN -t >/dev/null ; then
     lsof -Pi :80 -sTCP:LISTEN -t | xargs kill
 fi
 
-# Request the certificate
-certbot certonly --standalone \
+# Request the certificate using webroot method
+certbot certonly \
+    --webroot \
+    --webroot-path "$WEBROOT" \
     --non-interactive \
     --agree-tos \
     --email "$EMAIL" \
-    --domain "$DOMAIN" \
-    --http-01-port 80
+    --domain "$DOMAIN"
 
 # Copy certificates to our SSL directory
 echo "Copying certificates to $SSL_DIR..."
@@ -36,8 +39,8 @@ chmod 600 "$SSL_DIR/privkey.pem"
 chmod 600 "$SSL_DIR/cert.pem"
 chmod 600 "$SSL_DIR/fullchain.pem"
 
-# Setup auto-renewal
-echo "0 0 * * * root certbot renew --quiet --standalone --http-01-port 80" > /etc/cron.d/certbot-renew
+# Setup auto-renewal with webroot
+echo "0 0 * * * root certbot renew --quiet --webroot --webroot-path $WEBROOT" > /etc/cron.d/certbot-renew
 chmod 0644 /etc/cron.d/certbot-renew
 service cron start
 

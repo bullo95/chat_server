@@ -23,17 +23,19 @@ RUN npm install
 # Copy application files
 COPY . .
 
-# Create required directories
+# Create required directories and set permissions
 RUN mkdir -p /var/www/html/.well-known/acme-challenge \
     /etc/letsencrypt \
     /usr/src/app/public/uploads \
-    /usr/src/app/database_dumps
+    /usr/src/app/database_dumps \
+    && chown -R node:node /var/www/html \
+    && chmod -R 755 /var/www/html
 
 # Make scripts executable
 RUN chmod +x ./scripts/*.sh
 
 # Expose ports
-EXPOSE 61860 80 443
+EXPOSE 61860 443
 
 # Start the application
 CMD ["./scripts/init-certs.sh"]
