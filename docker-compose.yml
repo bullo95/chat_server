@@ -54,20 +54,38 @@ services:
       done;
       node server.js;
       "
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./certbot/www:/var/www/certbot
+    ports:
+      - "8081:8081"  # Le port 8081 est exposé pour le challenge ACME
+    command: >
+      sh -c "echo '
+      server {
+        listen 8081;
+        server_name ${DOMAIN};
+        location /.well-known/acme-challenge/ {
+          root /var/www/certbot;
+        }
+      }
+      ' > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
 
   certbot:
     image: certbot/certbot
     volumes:
       - ./certificates:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    command: >
-      certonly --webroot 
-      --webroot-path=/var/www/certbot 
-      --email domenech.bruno@me.com 
-      --agree-tos 
-      --no-eff-email 
-      --staging 
-      -d backend.vigilys.fr
+    environment:
+      - DOMAIN=${DOMAIN}
+      - CERTBOT_EMAIL=${CERTBOT_EMAIL}
+    entrypoint: sh -c "
+      if [ ! -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem ] || ! openssl x509 -checkend 86400 -noout -in /etc/letsencrypt/live/${DOMAIN}/fullchain.pem; then
+        certbot certonly --webroot -w /var/www/certbot --http-01-port 8081 --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN} -d www.${DOMAIN};
+      fi
+
+
 
 volumes:
   mysql_data:
+  app_uploads:
