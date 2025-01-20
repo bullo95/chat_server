@@ -39,6 +39,7 @@ services:
       - DB_NAME=dating_app
       - SERVER_IP=0.0.0.0
       - NODE_ENV=development
+      - DOMAIN=backend.vigilys.fr
     volumes:
       - ./certificates:/etc/letsencrypt:ro
       - ./public/uploads:/usr/src/app/public/uploads
@@ -59,12 +60,14 @@ services:
     volumes:
       - ./certificates:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    entrypoint: sh -c "
-      if [ ! -f /etc/letsencrypt/live/example.com/fullchain.pem ] || ! openssl x509 -checkend 86400 -noout -in /etc/letsencrypt/live/example.com/fullchain.pem; then
-        certbot certonly --webroot -w /var/www/certbot --email your-email@example.com --agree-tos --no-eff-email -d example.com -d www.example.com;
-      fi
-    
+    command: >
+      certonly --webroot 
+      --webroot-path=/var/www/certbot 
+      --email domenech.bruno@me.com 
+      --agree-tos 
+      --no-eff-email 
+      --staging 
+      -d backend.vigilys.fr
 
 volumes:
   mysql_data:
-  app_uploads:
