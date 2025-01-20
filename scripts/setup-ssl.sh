@@ -7,19 +7,21 @@ EMAIL="${EMAIL:-domenech.bruno@me.com}"
 SSL_DIR="/usr/src/app/ssl"
 WEBROOT="/var/www/html"
 
-# Create SSL directory if it doesn't exist
+# Create required directories
 mkdir -p "$SSL_DIR"
 mkdir -p "$WEBROOT/.well-known/acme-challenge"
+chmod -R 755 "$WEBROOT"
 
 echo "Setting up Let's Encrypt certificates..."
 
-# Stop any process that might be using port 8080
-if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null ; then
-    echo "Stopping processes using port 8080..."
-    lsof -Pi :8080 -sTCP:LISTEN -t | xargs kill
+# Ensure nginx is not running
+if pgrep nginx > /dev/null; then
+    echo "Stopping nginx..."
+    service nginx stop
 fi
 
 # Request the certificate using webroot method
+echo "Requesting certificate for $DOMAIN..."
 certbot certonly \
     --webroot \
     --webroot-path "$WEBROOT" \
@@ -27,34 +29,26 @@ certbot certonly \
     --agree-tos \
     --email "$EMAIL" \
     --domain "$DOMAIN" \
-    --http-01-port 8080
+    --preferred-challenges http-01 \
+    -v
 
-# Copy certificates to our SSL directory
-echo "Copying certificates to $SSL_DIR..."
-cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" "$SSL_DIR/privkey.pem"
-cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$SSL_DIR/fullchain.pem"
-cp "/etc/letsencrypt/live/$DOMAIN/cert.pem" "$SSL_DIR/cert.pem"
-
-# Set proper permissions
-chmod 600 "$SSL_DIR/privkey.pem"
-chmod 600 "$SSL_DIR/cert.pem"
-chmod 600 "$SSL_DIR/fullchain.pem"
-
-# Setup auto-renewal with webroot
-echo "0 0 * * * root certbot renew --quiet --webroot --webroot-path $WEBROOT --http-01-port 8080" > /etc/cron.d/certbot-renew
-chmod 0644 /etc/cron.d/certbot-renew
-service cron start
-
-# Display certificate information
-echo -e "\nCertificate information:"
-echo "------------------------"
-openssl x509 -in "$SSL_DIR/fullchain.pem" -text -noout | grep -A1 "Subject:"
-openssl x509 -in "$SSL_DIR/fullchain.pem" -text -noout | grep -A1 "Validity"
-echo -e "\nCertificate fingerprint:"
-openssl x509 -in "$SSL_DIR/fullchain.pem" -noout -fingerprint
-
-echo -e "\nSSL certificates generated successfully!"
-echo "Auto-renewal has been configured to run daily."
+# Check if certificates were generated successfully
+if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    echo "Certificates generated successfully. Copying to SSL directory..."
+    
+    # Copy certificates to the application SSL directory
+    cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$SSL_DIR/"
+    cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" "$SSL_DIR/"
+    
+    # Set proper permissions
+    chmod 644 "$SSL_DIR/fullchain.pem"
+    chmod 644 "$SSL_DIR/privkey.pem"
+    
+    echo "SSL setup completed successfully!"
+else
+    echo "Failed to generate certificates. Check /var/log/letsencrypt/letsencrypt.log for details."
+    exit 1
+fi
 
 # Start the Node.js application
 exec node server.js

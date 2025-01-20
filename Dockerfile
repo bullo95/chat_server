@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     certbot \
     python3-certbot \
     nginx \
+    lsof \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
