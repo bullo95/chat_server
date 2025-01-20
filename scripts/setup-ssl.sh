@@ -14,7 +14,22 @@ chown -R www-data:www-data /var/log/letsencrypt
 chown -R www-data:www-data /var/lib/letsencrypt
 chmod -R 755 /etc/letsencrypt
 
-# Start nginx temporarily for the certificate request
+# Stop nginx if it's running
+if pgrep nginx > /dev/null; then
+    echo "Stopping nginx..."
+    nginx -s stop || true
+    sleep 2
+fi
+
+# Make sure port 80 is free
+if lsof -i:80 > /dev/null 2>&1; then
+    echo "Port 80 is still in use. Killing processes..."
+    lsof -t -i:80 | xargs kill -9 || true
+    sleep 2
+fi
+
+# Start nginx with a fresh configuration
+echo "Starting nginx..."
 nginx
 
 # Request the certificate using nginx plugin
@@ -55,7 +70,8 @@ else
 fi
 
 # Restart nginx to apply the new configuration
-nginx -s reload
+echo "Restarting nginx with new configuration..."
+nginx -s reload || nginx
 
 # Start the Node.js application
 exec node server.js
