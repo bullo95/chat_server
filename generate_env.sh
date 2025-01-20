@@ -38,7 +38,7 @@ DB_PASSWORD=${DB_PASSWORD:-"tcukeb6-tcukeb6"}
 DB_NAME=${DB_NAME:-"dating_app"}
 GIPHY_API_KEY=${GIPHY_API_KEY:-"votre_api_key_giphy"}
 SERVER_IP=${SERVER_IP:-"127.0.0.1"}
-DOMAIN=${DOMAIN:-"t2m.vigilys.fr"}
+DOMAIN=${DOMAIN:-"backend.vigilys.fr"}
 EMAIL=${EMAIL:-"domenech.bruno@me.com"}
 
 # Génération du fichier .env
