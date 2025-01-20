@@ -24,7 +24,8 @@ COPY . .
 # Create required directories
 RUN mkdir -p /usr/src/app/ssl \
     /usr/src/app/public/uploads \
-    /usr/src/app/database_dumps
+    /usr/src/app/database_dumps \
+    /usr/src/app/.well-known/acme-challenge
 
 # Make scripts executable
 RUN chmod +x scripts/*.sh
@@ -39,7 +40,7 @@ RUN cd /tmp && \
     rm -rf /tmp/*
 
 # Expose ports
-EXPOSE 61860 8080 443
+EXPOSE 61860
 
 # Start the application
 CMD ["./scripts/init-certs.sh"]

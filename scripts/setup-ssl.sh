@@ -2,9 +2,9 @@
 set -e
 
 # Configuration variables
-DOMAIN="bdomenech.freeboxos.fr"
+DOMAIN="t2m.vigilys.fr"
 EMAIL="domenech.bruno@me.com"
-ACME_PORT="61860"  # Use the main application port
+ACME_PORT="${ACME_PORT:-80}"
 SSL_DIR="/usr/src/app/ssl"
 ACME_HOME="/root/.acme.sh"
 
@@ -24,6 +24,7 @@ check_acme() {
 # Create directories
 mkdir -p "$SSL_DIR"
 mkdir -p "$ACME_HOME"
+mkdir -p /usr/src/app/.well-known/acme-challenge
 
 echo "Setting up Let's Encrypt certificates..."
 
@@ -33,13 +34,12 @@ check_acme
 # Register account if needed
 "$ACME_HOME/acme.sh" --register-account -m "$EMAIL" || true
 
-# Issue certificate using standalone mode with port 61860
+# Issue certificate using HTTP challenge
 echo "Using port $ACME_PORT for ACME challenge..."
 "$ACME_HOME/acme.sh" --issue \
     -d "$DOMAIN" \
     --standalone \
     --httpport "$ACME_PORT" \
-    --listen-v4 \
     --server letsencrypt \
     --keylength 2048 \
     --cert-file "$SSL_DIR/cert.pem" \

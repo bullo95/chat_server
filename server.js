@@ -170,6 +170,26 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Add ACME challenge endpoint
+app.get('/.well-known/acme-challenge/:token', (req, res) => {
+  const token = req.params.token;
+  const wellKnownDir = path.join(__dirname, '.well-known', 'acme-challenge');
+  const tokenPath = path.join(wellKnownDir, token);
+
+  try {
+    if (fs.existsSync(tokenPath)) {
+      const content = fs.readFileSync(tokenPath, 'utf8');
+      res.setHeader('Content-Type', 'text/plain');
+      res.send(content);
+    } else {
+      res.status(404).send('Challenge token not found');
+    }
+  } catch (error) {
+    console.error('Error serving ACME challenge:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
 async function setupHttpsServer() {
   console.log('Setting up HTTPS server...');
   
