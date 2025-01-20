@@ -28,8 +28,6 @@ services:
     restart: always
     ports:
       - "61860:61860"
-      - "8080:80"
-      - "443:443"
     environment:
       - PORT=61860
       - DB_HOST=db
@@ -48,6 +46,18 @@ services:
       - ./ssl:/usr/src/app/ssl
     depends_on:
       - db
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ssl:/usr/src/app/ssl:ro
+    depends_on:
+      - app
 
 volumes:
   mysql_data:

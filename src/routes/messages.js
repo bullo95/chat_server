@@ -195,7 +195,7 @@ router.get('/conversations', async (req, res) => {
         u.photo_url as photoUrl,
         (
           SELECT content
-          FROM messages m2
+          FROM messages as m2
           WHERE (m2.sender_id = ? AND m2.receiver_id = u.id)
              OR (m2.sender_id = u.id AND m2.receiver_id = ?)
           ORDER BY m2.created_at DESC
@@ -203,7 +203,7 @@ router.get('/conversations', async (req, res) => {
         ) as lastMessage,
         (
           SELECT created_at
-          FROM messages m2
+          FROM messages as m2
           WHERE (m2.sender_id = ? AND m2.receiver_id = u.id)
              OR (m2.sender_id = u.id AND m2.receiver_id = ?)
           ORDER BY m2.created_at DESC
@@ -211,7 +211,7 @@ router.get('/conversations', async (req, res) => {
         ) as lastMessageTime,
         (
           SELECT COUNT(*)
-          FROM messages m3
+          FROM messages as m3
           WHERE m3.sender_id = u.id
             AND m3.receiver_id = ?
             AND m3.is_read = 0
