@@ -29,7 +29,6 @@ services:
     ports:
       - "61860:61860"
       - "8080:80"
-      - "443:443"
     environment:
       - PORT=61860
       - DB_HOST=db
