@@ -10,23 +10,18 @@ services:
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "3306:3306"
-    command: >
-      --default-authentication-plugin=mysql_native_password
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_unicode_ci
-      --bind-address=0.0.0.0
+    command: --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: mysqladmin ping -h localhost -u root --password=tcukeb6-tcukeb6
-      interval: 3s
-      retries: 40
-      start_period: 10s
-      timeout: 2s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: on-failure:3
+    restart: always
     ports:
       - "61860:61860/tcp"
       - "8080:8080/tcp"
