@@ -11,14 +11,20 @@ RUN apt-get update && apt-get install -y \
     python3-certbot-nginx \
     nginx \
     lsof \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /etc/letsencrypt \
+    && chmod 755 /etc/letsencrypt
 
 # Set working directory
 WORKDIR /usr/src/app
 
-# Create SSL directory
-RUN mkdir -p /usr/src/app/ssl && \
-    chown -R node:node /usr/src/app/ssl
+# Create necessary directories with proper permissions
+RUN mkdir -p /var/lib/letsencrypt/.well-known/acme-challenge \
+    && chown -R www-data:www-data /var/lib/letsencrypt \
+    && mkdir -p /var/log/letsencrypt \
+    && chown -R www-data:www-data /var/log/letsencrypt \
+    && mkdir -p ssl \
+    && chown -R www-data:www-data ssl
 
 # Copy package files
 COPY package*.json ./
@@ -35,11 +41,7 @@ RUN rm -f /etc/nginx/sites-enabled/default \
 COPY nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
 
 # Create required directories and set permissions
-RUN mkdir -p /var/www/html/.well-known/acme-challenge \
-    /etc/letsencrypt \
-    /usr/src/app/public/uploads \
-    /usr/src/app/database_dumps \
-    /var/log/nginx \
+RUN mkdir -p /var/www/html \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && touch /var/log/nginx/error.log \
