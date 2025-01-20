@@ -176,30 +176,26 @@ app.get('/.well-known/acme-challenge/:token', (req, res) => {
   }
 });
 
-async function setupHttpsServer() {
-  console.log('Setting up HTTPS server...');
+async function setupServer() {
+  console.log('Setting up server...');
   
   const sslDir = path.join(__dirname, 'ssl');
   const certPath = path.join(sslDir, 'fullchain.pem');
   const keyPath = path.join(sslDir, 'privkey.pem');
 
   try {
+    // Try to read SSL certificates
     const credentials = {
       key: fs.readFileSync(keyPath),
       cert: fs.readFileSync(certPath),
       minVersion: 'TLSv1.2'
     };
 
-    const server = https.createServer(credentials, app);
-    
-    server.listen(process.env.PORT, process.env.SERVER_IP, () => {
-      console.log(`✅ HTTPS Server running on ${process.env.SERVER_IP}:${process.env.PORT}`);
-    });
-
-    return server;
+    console.log('SSL certificates found, starting HTTPS server...');
+    return https.createServer(credentials, app);
   } catch (error) {
-    console.error('❌ Failed to start HTTPS server:', error.message);
-    process.exit(1);
+    console.log('SSL certificates not found, starting HTTP server...');
+    return require('http').createServer(app);
   }
 }
 
@@ -487,12 +483,7 @@ async function start() {
     await setupDatabaseAndServer();
     console.log('✅ Database setup completed');
 
-    const server = await setupHttpsServer();
-    if (!server) {
-      console.error('❌ Failed to setup HTTPS server');
-      process.exit(1);
-    }
-
+    const server = await setupServer();
     io.listen(server);
 
     const port = process.env.PORT || 61860;
@@ -502,16 +493,14 @@ async function start() {
     console.log('\nServer Configuration:');
     console.log(`- Domain: ${domain}`);
     console.log(`- Port: ${port}`);
-    console.log('- Protocol: HTTPS');
-    console.log('\nAPI Documentation:');
-    console.log(`https://${domain}:${port}/api-docs`);
-
+    
     // Start the server
     await new Promise((resolve, reject) => {
       server.listen(port, '0.0.0.0')
         .once('error', reject)
         .once('listening', () => {
-          console.log(`\n✅ HTTPS Server started successfully`);
+          const protocol = server instanceof https.Server ? 'HTTPS' : 'HTTP';
+          console.log(`\n✅ ${protocol} Server started successfully on port ${port}`);
           resolve();
         });
     });
