@@ -24,7 +24,9 @@ RUN npm install
 # Copy application files
 COPY . .
 
-# Copy Nginx configuration
+# Remove default Nginx configuration and copy our configuration
+RUN rm -f /etc/nginx/sites-enabled/default \
+    && rm -f /etc/nginx/sites-available/default
 COPY nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
 
 # Create required directories and set permissions
@@ -37,7 +39,8 @@ RUN mkdir -p /var/www/html/.well-known/acme-challenge \
     && chmod -R 755 /var/www/html \
     && mkdir -p /var/log/nginx \
     && touch /var/log/nginx/error.log \
-    && touch /var/log/nginx/access.log
+    && touch /var/log/nginx/access.log \
+    && chown -R www-data:www-data /var/log/nginx
 
 # Make scripts executable
 RUN chmod +x ./scripts/*.sh
