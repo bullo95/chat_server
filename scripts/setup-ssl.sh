@@ -8,29 +8,52 @@ SSL_DIR="/usr/src/app/ssl"
 
 # Create SSL directory if it doesn't exist
 mkdir -p "$SSL_DIR"
+mkdir -p /var/www/html/.well-known/acme-challenge
 
 echo "Setting up Let's Encrypt certificates..."
 
-# Stop any process that might be using port 8080
-if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null ; then
-    echo "Stopping processes using port 8080..."
-    lsof -Pi :8080 -sTCP:LISTEN -t | xargs kill
-fi
+# Stop any process that might be using ports
+for port in 8080 61860; do
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
+        echo "Stopping processes using port $port..."
+        lsof -Pi :$port -sTCP:LISTEN -t | xargs kill || true
+    fi
+done
 
 # Stop nginx temporarily
-service nginx stop
+service nginx stop || true
+
+# Wait for ports to be free
+for port in 8080 61860; do
+    while lsof -Pi :$port -sTCP:LISTEN -t >/dev/null; do
+        echo "Waiting for port $port to be free..."
+        sleep 1
+    done
+done
 
 # Request the certificate using standalone method
+echo "Requesting certificate for $DOMAIN..."
 certbot certonly \
     --standalone \
     --non-interactive \
     --agree-tos \
     --email "$EMAIL" \
     --domain "$DOMAIN" \
-    --http-01-port 8080
+    --http-01-port 8080 \
+    --cert-name "$DOMAIN" \
+    --keep-until-expiring \
+    --expand \
+    --debug
+
+# Check if certificate was obtained
+if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+    echo "Failed to obtain certificates"
+    exit 1
+fi
 
 # Copy certificates to our SSL directory
 echo "Copying certificates to $SSL_DIR..."
+mkdir -p "$SSL_DIR"
 cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" "$SSL_DIR/privkey.pem"
 cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$SSL_DIR/fullchain.pem"
 cp "/etc/letsencrypt/live/$DOMAIN/cert.pem" "$SSL_DIR/cert.pem"
@@ -40,15 +63,21 @@ chmod 600 "$SSL_DIR/privkey.pem"
 chmod 600 "$SSL_DIR/cert.pem"
 chmod 600 "$SSL_DIR/fullchain.pem"
 
-# Setup auto-renewal
-echo "0 0 * * * root certbot renew --quiet --standalone --http-01-port 8080 --pre-hook 'service nginx stop' --post-hook 'service nginx start'" > /etc/cron.d/certbot-renew
+# Setup auto-renewal with pre and post hooks
+echo "Setting up auto-renewal..."
+cat > /etc/cron.d/certbot-renew <<EOF
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+0 */12 * * * root certbot renew --quiet --standalone --http-01-port 8080 --pre-hook "service nginx stop" --post-hook "service nginx start && service cron reload"
+EOF
+
 chmod 0644 /etc/cron.d/certbot-renew
-service cron start
+service cron start || true
 
-# Start nginx
-service nginx start
+echo "Certificate setup complete!"
+echo "Certificate Information:"
+certbot certificates
 
-# Display certificate information
-echo -e "\nCertificate information:"
-echo "------------------------"
-openssl x509 -in "$SSL_DIR/fullchain.pem" -text -noout | grep -A1 "Subject:"
+# Don't start nginx here, let the main script handle it
+exit 0
