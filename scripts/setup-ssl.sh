@@ -5,11 +5,9 @@ set -e
 DOMAIN="${DOMAIN:-t2m.vigilys.fr}"
 EMAIL="${EMAIL:-domenech.bruno@me.com}"
 SSL_DIR="/usr/src/app/ssl"
-WEBROOT="/var/www/html"
 
 # Create SSL directory if it doesn't exist
 mkdir -p "$SSL_DIR"
-mkdir -p "$WEBROOT/.well-known/acme-challenge"
 
 echo "Setting up Let's Encrypt certificates..."
 
@@ -19,10 +17,12 @@ if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null ; then
     lsof -Pi :8080 -sTCP:LISTEN -t | xargs kill
 fi
 
-# Request the certificate using webroot method
+# Stop nginx temporarily
+service nginx stop
+
+# Request the certificate using standalone method
 certbot certonly \
-    --webroot \
-    --webroot-path "$WEBROOT" \
+    --standalone \
     --non-interactive \
     --agree-tos \
     --email "$EMAIL" \
@@ -40,21 +40,15 @@ chmod 600 "$SSL_DIR/privkey.pem"
 chmod 600 "$SSL_DIR/cert.pem"
 chmod 600 "$SSL_DIR/fullchain.pem"
 
-# Setup auto-renewal with webroot
-echo "0 0 * * * root certbot renew --quiet --webroot --webroot-path $WEBROOT --http-01-port 8080" > /etc/cron.d/certbot-renew
+# Setup auto-renewal
+echo "0 0 * * * root certbot renew --quiet --standalone --http-01-port 8080 --pre-hook 'service nginx stop' --post-hook 'service nginx start'" > /etc/cron.d/certbot-renew
 chmod 0644 /etc/cron.d/certbot-renew
 service cron start
+
+# Start nginx
+service nginx start
 
 # Display certificate information
 echo -e "\nCertificate information:"
 echo "------------------------"
 openssl x509 -in "$SSL_DIR/fullchain.pem" -text -noout | grep -A1 "Subject:"
-openssl x509 -in "$SSL_DIR/fullchain.pem" -text -noout | grep -A1 "Validity"
-echo -e "\nCertificate fingerprint:"
-openssl x509 -in "$SSL_DIR/fullchain.pem" -noout -fingerprint
-
-echo -e "\nSSL certificates generated successfully!"
-echo "Auto-renewal has been configured to run daily."
-
-# Start the Node.js application
-exec node server.js
