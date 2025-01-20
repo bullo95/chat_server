@@ -1,3 +1,5 @@
+version: '3.7'
+
 services:
   db:
     image: mysql:8.0
@@ -27,24 +29,41 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "61860:61860"
+      - "80:80"
+      - "443:443"
     environment:
-      - PORT=61860
+      - PORT=443
       - DB_HOST=db
       - DB_USER=root
       - DB_PASSWORD=tcukeb6-tcukeb6
       - DB_NAME=dating_app
       - SERVER_IP=0.0.0.0
-      - GIPHY_API_KEY=${GIPHY_API_KEY:-dummy_key}
-      - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
-      - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-dummy_key}
-      - EMAIL=domenech.bruno@me.com
       - NODE_ENV=development
     volumes:
+      - ./certificates:/etc/letsencrypt:ro
       - ./public/uploads:/usr/src/app/public/uploads
       - ./database_dumps:/usr/src/app/database_dumps
     depends_on:
       - db
+    command: >
+      sh -c "
+      while ! mysqladmin ping -h db -u root -ptcukeb6-tcukeb6 --silent; do
+        echo 'Waiting for database...';
+        sleep 3;
+      done;
+      node server.js;
+      "
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certificates:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: sh -c "
+      if [ ! -f /etc/letsencrypt/live/example.com/fullchain.pem ] || ! openssl x509 -checkend 86400 -noout -in /etc/letsencrypt/live/example.com/fullchain.pem; then
+        certbot certonly --webroot -w /var/www/certbot --email your-email@example.com --agree-tos --no-eff-email -d example.com -d www.example.com;
+      fi
+    
 
 volumes:
   mysql_data:

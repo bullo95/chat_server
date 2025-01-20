@@ -7,6 +7,9 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 const YAML = require('yamljs');
 const fs = require('fs');
+const https = require('https');
+
+
 
 // Debug logging
 console.log('Starting server initialization...');
@@ -466,50 +469,33 @@ async function setupDatabaseAndServer() {
   }
 }
 
-// Start server
-async function start() {
+
+// Charger les certificats SSL
+const sslOptions = {
+  key: fs.readFileSync(path.resolve(__dirname, './certificates/privkey.pem')),
+  cert: fs.readFileSync(path.resolve(__dirname, './certificates/fullchain.pem')),
+};
+
+// Démarrer le serveur HTTPS
+async function startServer() {
   try {
     console.log('Starting database setup...');
     await setupDatabaseAndServer();
     console.log('✅ Database setup completed');
 
-    const server = app.listen(process.env.PORT, process.env.SERVER_IP, () => {
-      console.log(`✅ HTTP Server running on ${process.env.SERVER_IP}:${process.env.PORT}`);
+    const PORT = process.env.PORT || 443;
+    const httpsServer = https.createServer(sslOptions, app);
+
+    httpsServer.listen(PORT, process.env.SERVER_IP || '0.0.0.0', () => {
+      console.log(`✅ HTTPS Server running on https://${process.env.SERVER_IP || 'localhost'}:${PORT}`);
     });
 
-    io.listen(server);
-
-    const port = process.env.PORT || 61860;
-    const domain = process.env.DOMAIN || process.env.SERVER_IP;
-    
-    // Log server configuration before starting
-    console.log('\nServer Configuration:');
-    console.log(`- Domain: ${domain}`);
-    console.log(`- Port: ${port}`);
-    console.log('- Protocol: HTTP');
-    console.log('\nAPI Documentation:');
-    console.log(`http://${domain}:${port}/api-docs`);
-
-    // Start the server
-    await new Promise((resolve, reject) => {
-      server.listen(port, '0.0.0.0')
-        .once('error', reject)
-        .once('listening', () => {
-          console.log(`\n✅ HTTP Server started successfully`);
-          resolve();
-        });
-    });
+    io.listen(httpsServer); // Lier Socket.IO au serveur HTTPS
   } catch (error) {
-    if (error.code === 'EADDRINUSE') {
-      console.error(`\n❌ Port ${process.env.PORT} is already in use`);
-      console.error('Please make sure no other service is using this port');
-    } else {
-      console.error('\n❌ Startup error:', error);
-      console.error('Stack trace:', error.stack);
-    }
+    console.error('\n❌ Startup error:', error);
     process.exit(1);
   }
 }
 
-// Start the application
-start();
+// Lancer le serveur
+startServer();
