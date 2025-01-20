@@ -3,11 +3,8 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      - MYSQL_ROOT_PASSWORD=tcukeb6-tcukeb6
-      - MYSQL_DATABASE=dating_app
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=tcukeb6-tcukeb6
-      - MYSQL_TCP_PORT=3306
+      MYSQL_ROOT_PASSWORD: tcukeb6-tcukeb6
+      MYSQL_DATABASE: dating_app
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -18,19 +15,18 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --bind-address=0.0.0.0
-      --init-file=/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptcukeb6-tcukeb6"]
-      interval: 10s
-      timeout: 20s
-      retries: 10
-      start_period: 60s
+      test: mysqladmin ping -h localhost -u root --password=tcukeb6-tcukeb6
+      interval: 3s
+      retries: 40
+      start_period: 10s
+      timeout: 2s
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: on-failure
+    restart: on-failure:3
     ports:
       - "61860:61860/tcp"
       - "8080:8080/tcp"

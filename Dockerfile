@@ -34,5 +34,5 @@ RUN curl https://get.acme.sh | sh -s email=domenech.bruno@me.com
 # Expose ports
 EXPOSE 61860 8080
 
-# Start the application
-CMD ["./scripts/init-certs.sh"]
+# Start the application with MySQL check
+CMD ["./scripts/wait-for-mysql.sh", "db", "./scripts/init-certs.sh"]
