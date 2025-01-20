@@ -32,13 +32,12 @@ echo "Clés VAPID configurées avec succès"
 
 # Configuration des variables d'environnement
 PORT=${PORT:-61860}
-DB_HOST=${DB_HOST:-"db"}
+DB_HOST=${DB_HOST:-"localhost"}
 DB_USER=${DB_USER:-"root"}
 DB_PASSWORD=${DB_PASSWORD:-"tcukeb6-tcukeb6"}
 DB_NAME=${DB_NAME:-"dating_app"}
 GIPHY_API_KEY=${GIPHY_API_KEY:-"votre_api_key_giphy"}
 SERVER_IP=${SERVER_IP:-"127.0.0.1"}
-DOMAIN=${DOMAIN:-"backend.vigilys.fr"}
 EMAIL=${EMAIL:-"domenech.bruno@me.com"}
 
 # Génération du fichier .env
@@ -51,7 +50,6 @@ DB_PASSWORD=$DB_PASSWORD
 DB_NAME=$DB_NAME
 GIPHY_API_KEY=$GIPHY_API_KEY
 SERVER_IP=$SERVER_IP
-DOMAIN="$DOMAIN"
 PUBLIC_VAPID_KEY=$PUBLIC_VAPID_KEY
 PRIVATE_VAPID_KEY=$PRIVATE_VAPID_KEY
 EMAIL="$EMAIL"

@@ -28,24 +28,21 @@ services:
     restart: always
     ports:
       - "61860:61860"
-      - "8080:80"
-      - "443:443"
     environment:
       - PORT=61860
       - DB_HOST=db
       - DB_USER=root
       - DB_PASSWORD=tcukeb6-tcukeb6
       - DB_NAME=dating_app
-      - DOMAIN=backend.vigilys.fr
       - SERVER_IP=0.0.0.0
       - GIPHY_API_KEY=${GIPHY_API_KEY:-dummy_key}
       - PUBLIC_VAPID_KEY=${PUBLIC_VAPID_KEY:-dummy_key}
       - PRIVATE_VAPID_KEY=${PRIVATE_VAPID_KEY:-dummy_key}
       - EMAIL=domenech.bruno@me.com
-      - NODE_ENV=production
+      - NODE_ENV=development
     volumes:
-      - app_uploads:/usr/src/app/public/uploads
-      - ./ssl:/usr/src/app/ssl
+      - ./public/uploads:/usr/src/app/public/uploads
+      - ./database_dumps:/usr/src/app/database_dumps
     depends_on:
       - db
 
