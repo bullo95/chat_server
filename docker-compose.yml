@@ -66,6 +66,7 @@ services:
         certbot certonly --standalone--http-01-port 8080 -d ${DOMAIN} --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email ;
       fi"
 
+volumes:
   mysql_data:
   app_uploads:
   certbot-webroot:
