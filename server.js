@@ -146,21 +146,7 @@ app.use((req, res, next) => {
 
 // Configuration CORS with detailed logging
 const corsOptions = {
-  origin: function(origin, callback) {
-    const allowedOrigins = [
-      `https://${process.env.DOMAIN}`,
-      `https://${process.env.DOMAIN}:61860`,
-      'http://localhost:3000',
-      'http://localhost:61860'
-    ];
-    console.log('Incoming request origin:', origin);
-    console.log('Allowed origins:', allowedOrigins);
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS not allowed'));
-    }
-  },
+  origin: true, // reflects the request origin
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
