@@ -27,7 +27,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "8080:80"
+      - "80:80"
       - "443:443"
     environment:
       - PORT=443
@@ -63,7 +63,7 @@ services:
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
     entrypoint: >
       sh -c "if [ ! -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem ] || ! openssl x509 -checkend 86400 -noout -in /etc/letsencrypt/live/${DOMAIN}/fullchain.pem; then
-        certbot certonly --standalone --http-01-port 8081 -d ${DOMAIN} --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email ;
+        certbot certonly --standalone -d ${DOMAIN} --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email ;
       fi"
 
 volumes:
