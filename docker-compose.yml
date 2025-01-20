@@ -21,15 +21,6 @@ services:
       timeout: 5s
       retries: 10
 
-  webserver:
-    image: nginx:alpine
-    restart: always
-    ports:
-      - "8080:80"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - webroot:/var/www/html
-    
   app:
     build:
       context: .
@@ -37,6 +28,7 @@ services:
     restart: always
     ports:
       - "61860:61860"
+      - "80:80"
       - "443:443"
     environment:
       - PORT=61860
@@ -54,12 +46,9 @@ services:
     volumes:
       - app_uploads:/usr/src/app/public/uploads
       - ./ssl:/usr/src/app/ssl
-      - webroot:/var/www/html
     depends_on:
       - db
-      - webserver
 
 volumes:
   mysql_data:
   app_uploads:
-  webroot:
