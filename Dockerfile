@@ -7,13 +7,11 @@ RUN apt-get update && apt-get install -y \
     socat \
     mariadb-client \
     cron \
-    python3-pip \
-    python3-venv \
+    certbot \
+    python3-certbot-nginx \
     nginx \
     lsof \
-    && rm -rf /var/lib/apt/lists/* \
-    && python3 -m pip install --upgrade pip \
-    && python3 -m pip install --no-cache-dir certbot
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /usr/src/app
