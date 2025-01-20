@@ -102,15 +102,15 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Dating App API',
+      title: 'Chat API',
       version: '1.0.0',
-      description: 'API Documentation for Dating App including REST and Socket.IO endpoints',
+      description: 'API documentation for the chat application'
     },
     servers: [
       {
-        url: `https://${process.env.SERVER_IP}:${process.env.PORT}`,
-        description: 'Development server',
-      },
+        url: `http://${process.env.DOMAIN}:8080/api`,
+        description: 'Development server'
+      }
     ],
     components: {
       securitySchemes: {
@@ -199,55 +199,32 @@ async function setupServer() {
   }
 }
 
+// Add health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // Add test endpoint
 app.get('/test', (req, res) => {
   res.json({ 
     message: 'Server is running!',
-    protocol: req.protocol,
-    secure: req.secure,
-    headers: req.headers
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT,
+      DOMAIN: process.env.DOMAIN,
+      SERVER_IP: process.env.SERVER_IP
+    }
   });
 });
 
-// Configure Socket.IO with CORS
-const io = new Server(null, {
-  cors: {
-    origin: corsOptions.origin,
-    methods: corsOptions.methods,
-    credentials: true
-  }
-});
-
-// Make io accessible to routes
-app.set('io', io);
-
-// Log all requests
-app.use((req, res, next) => {
-  console.log('\n=== New Request ===');
-  console.log('Method:', req.method);
-  console.log('URL:', req.url);
-  console.log('Headers:', req.headers);
-  console.log('Body before parsing:', req.body);
-  next();
-});
+// Serve Swagger UI
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Middleware pour servir les fichiers statiques du dossier uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Documentation Swagger UI avec options d'export
-app.use('/api-docs', swaggerUi.serve);
-app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
-  explorer: true,
-  customCss: '.swagger-ui .topbar { display: none }',
-  swaggerOptions: {
-    docExpansion: 'list',
-    filter: true,
-    showRequestDuration: true,
-    supportedSubmitMethods: ['get', 'post', 'put', 'delete'],
-  },
-}));
-
-// Export de la documentation
 app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Disposition', 'attachment; filename=api-docs.json');

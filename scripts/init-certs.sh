@@ -39,15 +39,6 @@ server {
     location / {
         try_files \$uri \$uri/ /index.html;
     }
-
-    location /api/ {
-        proxy_pass http://localhost:61860/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
 }
 EOF
     else
@@ -71,15 +62,6 @@ server {
     location / {
         try_files \$uri \$uri/ /index.html;
     }
-
-    location /api/ {
-        proxy_pass http://localhost:61860/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
 }
 EOF
     fi
@@ -91,7 +73,7 @@ if [ ! -d "/usr/src/frontend" ]; then
     git clone https://github.com/bullo95/chat_frontend.git /usr/src/frontend
     cd /usr/src/frontend
     npm install
-    npm run build
+    REACT_APP_API_URL=http://t2m.vigilys.fr:61860 npm run build
     cd /usr/src/app
 fi
 
@@ -107,22 +89,6 @@ while ! mysqladmin ping -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" --silent; do
     sleep 1
 done
 echo "MySQL is ready"
-
-# Step 3: Start Node.js
-echo "Starting Node.js application..."
-node server.js &
-NODE_PID=$!
-
-# Wait for Node.js to start
-echo "Waiting for Node.js to be ready..."
-until curl -s http://localhost:61860/health >/dev/null 2>&1; do
-    if ! kill -0 $NODE_PID 2>/dev/null; then
-        echo "Node.js process died"
-        exit 1
-    fi
-    sleep 1
-done
-echo "Node.js is ready"
 
 # Step 4: Check SSL certificates and configure Nginx
 if check_ssl; then
@@ -148,10 +114,6 @@ nginx -t && service nginx start
 
 # Monitor processes
 while true; do
-    if ! kill -0 $NODE_PID 2>/dev/null; then
-        echo "Node.js process died"
-        exit 1
-    fi
     if ! service nginx status >/dev/null 2>&1; then
         echo "Nginx process died"
         exit 1
