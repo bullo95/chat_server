@@ -15,13 +15,13 @@ check_certificate() {
     if [[ ! -f "$cert_file" ]] || [[ ! -f "$key_file" ]]; then
         echo "❌ SSL certificates not found"
         return 1
-    }
+    fi
 
     # Check if certificate is readable
     if ! openssl x509 -in "$cert_file" -text -noout &>/dev/null; then
         echo "❌ Invalid certificate format"
         return 1
-    }
+    fi
 
     # Get expiration date
     local end_date=$(openssl x509 -in "$cert_file" -enddate -noout | cut -d= -f2)
@@ -57,13 +57,13 @@ fi
 echo "Proceeding with certificate generation..."
 
 # Register account
-~/.acme.sh/acme.sh --register-account -m $EMAIL
+~/.acme.sh/acme.sh --register-account -m "$EMAIL"
 
 # Issue certificate using standalone mode
 ~/.acme.sh/acme.sh --issue \
-  -d $DOMAIN \
+  -d "$DOMAIN" \
   --standalone \
-  --httpport $ACME_PORT \
+  --httpport "$ACME_PORT" \
   --server letsencrypt \
   --keylength 2048 \
   --cert-file "$SSL_DIR/cert.pem" \
