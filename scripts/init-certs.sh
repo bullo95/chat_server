@@ -36,9 +36,24 @@ check_ssl() {
     return 0
 }
 
-# Setup SSL certificates
-./scripts/setup-ssl.sh
-
 # Start the Node.js application
 echo "Starting Node.js application..."
-exec node server.js
+node server.js &
+
+# Wait for the Node.js application to start
+sleep 5
+
+# Try to get SSL certificates
+echo "Setting up Let's Encrypt certificates..."
+./scripts/setup-ssl.sh || {
+    echo "Failed to get SSL certificates. Running in HTTP mode only."
+    # Update Nginx config to remove SSL parts if they exist
+    sed -i '/listen.*ssl/d' /etc/nginx/conf.d/default.conf
+    sed -i '/ssl_certificate/d' /etc/nginx/conf.d/default.conf
+    
+    # Reload Nginx to apply changes
+    nginx -t && service nginx reload
+}
+
+# Keep the container running
+tail -f /var/log/nginx/access.log

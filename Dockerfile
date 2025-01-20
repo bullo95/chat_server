@@ -58,26 +58,8 @@ RUN cp -r /usr/src/frontend/dist/* /var/www/html/
 # Make scripts executable
 RUN chmod +x ./scripts/*.sh
 
-# Create startup script
-RUN echo '#!/bin/bash\n\
-echo "Testing Nginx configuration..."\n\
-nginx -t\n\
-if [ $? -eq 0 ]; then\n\
-    echo "Starting Nginx..."\n\
-    service nginx start\n\
-    if [ $? -ne 0 ]; then\n\
-        echo "Nginx failed to start. Checking logs:"\n\
-        cat /var/log/nginx/error.log\n\
-    fi\n\
-else\n\
-    echo "Nginx configuration test failed"\n\
-    exit 1\n\
-fi\n\
-./scripts/init-certs.sh' > /usr/src/app/start.sh \
-    && chmod +x /usr/src/app/start.sh
-
 # Expose ports
 EXPOSE 61860 80 443
 
-# Start both Nginx and Node.js
-CMD ["/usr/src/app/start.sh"]
+# Start services using init-certs.sh
+CMD ["./scripts/init-certs.sh"]
