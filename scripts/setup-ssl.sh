@@ -22,14 +22,23 @@ sleep 2
 
 # Request the certificate using standalone mode
 echo "Requesting certificate for $DOMAIN..."
-certbot certonly \
+if ! certbot certonly \
     --standalone \
     --non-interactive \
     --agree-tos \
     --email "$EMAIL" \
     --domain "$DOMAIN" \
     --preferred-challenges http \
-    -v
+    --debug-challenges \
+    --verbose 2>&1 | tee /var/log/certbot.log; then
+    
+    echo "Certbot failed. Displaying logs:"
+    echo "=== certbot.log ==="
+    cat /var/log/certbot.log
+    echo "=== letsencrypt.log ==="
+    cat /var/log/letsencrypt/letsencrypt.log
+    exit 1
+fi
 
 # Check if certificates were generated successfully
 if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
@@ -45,8 +54,7 @@ if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
     
     echo "SSL setup completed successfully!"
 else
-    echo "Failed to generate certificates. Check /var/log/letsencrypt/letsencrypt.log for details."
-    cat /var/log/letsencrypt/letsencrypt.log
+    echo "Failed to generate certificates. Check logs above for details."
     exit 1
 fi
 
